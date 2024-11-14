@@ -4704,6 +4704,7 @@ version = "0.1.0"
 dependencies = [
  "futures",
  "itertools 0.13.0",
+ "pollster",
  "rayon",
  "rspack_error",
  "rustc-hash 1.1.0",

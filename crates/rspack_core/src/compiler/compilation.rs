@@ -10,6 +10,7 @@ use dashmap::DashSet;
 use indexmap::{IndexMap, IndexSet};
 use itertools::Itertools;
 use rayon::prelude::*;
+use rspack_cacheable::cacheable;
 use rspack_collections::{
   DatabaseItem, Identifiable, IdentifierDashMap, IdentifierMap, IdentifierSet, UkeyMap, UkeySet,
 };
@@ -114,6 +115,7 @@ pub struct CompilationHooks {
   pub after_seal: CompilationAfterSealHook,
 }
 
+#[cacheable]
 #[derive(Debug, Clone, Copy, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct CompilationId(u32);
 
@@ -747,6 +749,7 @@ impl Compilation {
 
   #[instrument(name = "compilation:make", skip_all)]
   pub async fn make(&mut self) -> Result<()> {
+    self.cache.before_make(&mut self.make_artifact);
     self.make_artifact.reset_dependencies_incremental_info();
     //        self.module_executor.
     // run module_executor
@@ -1141,7 +1144,7 @@ impl Compilation {
     // take make diagnostics
     let diagnostics = self.make_artifact.take_diagnostics();
     self.extend_diagnostics(diagnostics);
-
+    self.cache.after_make(&self.make_artifact);
     Ok(())
   }
 

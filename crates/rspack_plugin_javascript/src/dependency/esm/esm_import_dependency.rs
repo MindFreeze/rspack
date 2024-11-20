@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use rspack_cacheable::{cacheable, cacheable_dyn, with::AsPreset};
 use rspack_collections::IdentifierSet;
 use rspack_core::Compilation;
 use rspack_core::DependencyConditionFn;
@@ -56,8 +57,10 @@ pub mod import_emitted_runtime {
 }
 
 // ESMImportDependency is merged ESMImportSideEffectDependency.
+#[cacheable]
 #[derive(Debug, Clone)]
 pub struct ESMImportSideEffectDependency {
+  #[cacheable(with=AsPreset)]
   pub request: Atom,
   pub source_order: i32,
   pub id: DependencyId,
@@ -385,6 +388,7 @@ pub fn esm_import_dependency_get_linking_error<T: ModuleDependency>(
   None
 }
 
+#[cacheable_dyn]
 impl Dependency for ESMImportSideEffectDependency {
   fn id(&self) -> &DependencyId {
     &self.id
@@ -464,6 +468,7 @@ impl DependencyConditionFn for ESMImportSideEffectDependencyCondition {
   }
 }
 
+#[cacheable_dyn]
 impl ModuleDependency for ESMImportSideEffectDependency {
   fn is_export_all(&self) -> Option<bool> {
     Some(self.export_all)
@@ -495,6 +500,7 @@ impl ModuleDependency for ESMImportSideEffectDependency {
   // It's from ESMImportSideEffectDependency.
 }
 
+#[cacheable_dyn]
 impl DependencyTemplate for ESMImportSideEffectDependency {
   fn apply(
     &self,

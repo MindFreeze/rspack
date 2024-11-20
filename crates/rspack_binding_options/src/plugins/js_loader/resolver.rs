@@ -3,6 +3,7 @@ use std::{
   sync::{Arc, LazyLock},
 };
 
+use rspack_cacheable::{cacheable, cacheable_dyn};
 use rspack_collections::{Identifiable, Identifier};
 use rspack_core::{
   BoxLoader, Context, Loader, ModuleRuleUseLoader, NormalModuleFactoryResolveLoader, ResolveResult,
@@ -24,9 +25,11 @@ use tokio::sync::RwLock;
 
 use super::{JsLoaderRspackPlugin, JsLoaderRspackPluginInner};
 
+#[cacheable]
 #[derive(Debug)]
 pub struct JsLoader(pub Identifier);
 
+#[cacheable_dyn]
 impl Loader<RunnerContext> for JsLoader {}
 
 impl Identifiable for JsLoader {

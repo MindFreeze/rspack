@@ -1,3 +1,4 @@
+use rspack_cacheable::{cacheable, cacheable_dyn};
 use rspack_core::{
   AsContextDependency, AsModuleDependency, Compilation, Dependency, DependencyId, DependencyRange,
   DependencyTemplate, DependencyType, RuntimeSpec, TemplateContext, TemplateReplaceSource,
@@ -6,6 +7,7 @@ use rspack_core::{
 // Remove `export` label.
 // Before: `export const a = 1`
 // After: `const a = 1`
+#[cacheable]
 #[derive(Debug, Clone)]
 pub struct ESMExportHeaderDependency {
   id: DependencyId,
@@ -23,6 +25,7 @@ impl ESMExportHeaderDependency {
   }
 }
 
+#[cacheable_dyn]
 impl Dependency for ESMExportHeaderDependency {
   fn id(&self) -> &rspack_core::DependencyId {
     &self.id
@@ -41,6 +44,7 @@ impl Dependency for ESMExportHeaderDependency {
   }
 }
 
+#[cacheable_dyn]
 impl DependencyTemplate for ESMExportHeaderDependency {
   fn apply(
     &self,

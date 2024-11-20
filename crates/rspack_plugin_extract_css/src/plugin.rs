@@ -3,15 +3,16 @@ use std::{borrow::Cow, cmp::max, hash::Hash, sync::Arc};
 
 use cow_utils::CowUtils;
 use regex::Regex;
+use rspack_cacheable::cacheable;
 use rspack_collections::{DatabaseItem, IdentifierMap, IdentifierSet, UkeySet};
 use rspack_core::ChunkGraph;
 use rspack_core::{
   rspack_sources::{ConcatSource, RawSource, SourceMap, SourceMapSource, WithoutOriginalOptions},
   ApplyContext, Chunk, ChunkGroupUkey, ChunkKind, ChunkUkey, Compilation, CompilationContentHash,
   CompilationParams, CompilationRenderManifest, CompilationRuntimeRequirementInTree,
-  CompilerCompilation, CompilerOptions, Filename, Module, ModuleGraph, ModuleIdentifier,
-  ModuleType, NormalModuleFactoryParser, ParserAndGenerator, ParserOptions, PathData, Plugin,
-  PluginContext, RenderManifestEntry, RuntimeGlobals, SourceType,
+  CompilerCompilation, CompilerOptions, DependencyType, Filename, Module, ModuleGraph,
+  ModuleIdentifier, ModuleType, NormalModuleFactoryParser, ParserAndGenerator, ParserOptions,
+  PathData, Plugin, PluginContext, RenderManifestEntry, RuntimeGlobals, SourceType,
 };
 use rspack_error::{Diagnostic, Result};
 use rspack_hash::RspackHash;
@@ -24,7 +25,7 @@ use rustc_hash::FxHashMap;
 use ustr::Ustr;
 
 use crate::{
-  css_module::{CssModule, CssModuleFactory, DEPENDENCY_TYPE},
+  css_module::{CssModule, CssModuleFactory},
   parser_plugin::PluginCssExtractParserPlugin,
   runtime::CssLoadingRuntimeModule,
 };
@@ -100,6 +101,7 @@ pub struct CssExtractOptions {
 //   }
 // }
 
+#[cacheable]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum InsertType {
   Fn(String),
@@ -427,7 +429,7 @@ async fn compilation(
   compilation: &mut Compilation,
   _params: &mut CompilationParams,
 ) -> Result<()> {
-  compilation.set_dependency_factory(*DEPENDENCY_TYPE, Arc::new(CssModuleFactory));
+  compilation.set_dependency_factory(DependencyType::ExtractCSS, Arc::new(CssModuleFactory));
   Ok(())
 }
 

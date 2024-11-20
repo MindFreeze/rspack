@@ -1,15 +1,18 @@
 use std::hash::Hash;
 use std::path::PathBuf;
-use std::sync::LazyLock;
 
+use rspack_cacheable::{
+  cacheable, cacheable_dyn,
+  with::{AsString, AsVec},
+};
 use rspack_collections::{Identifiable, Identifier};
 use rspack_core::rspack_sources::Source;
 use rspack_core::{
   impl_module_meta_info, impl_source_map_config, module_update_hash,
   AsyncDependenciesBlockIdentifier, BuildContext, BuildInfo, BuildMeta, BuildResult,
   CodeGenerationResult, Compilation, CompilerOptions, ConcatenationScope, DependenciesBlock,
-  DependencyId, DependencyType, FactoryMeta, Module, ModuleFactory, ModuleFactoryCreateData,
-  ModuleFactoryResult, RuntimeSpec, SourceType,
+  DependencyId, FactoryMeta, Module, ModuleFactory, ModuleFactoryCreateData, ModuleFactoryResult,
+  RuntimeSpec, SourceType,
 };
 use rspack_error::Result;
 use rspack_error::{impl_empty_diagnosable_trait, Diagnostic};
@@ -21,10 +24,8 @@ use rustc_hash::FxHashSet;
 use crate::css_dependency::CssDependency;
 use crate::plugin::{MODULE_TYPE, SOURCE_TYPE};
 
-pub(crate) static DEPENDENCY_TYPE: LazyLock<DependencyType> =
-  LazyLock::new(|| DependencyType::Custom("mini-extract-dep"));
-
 #[impl_source_map_config]
+#[cacheable]
 #[derive(Debug)]
 pub(crate) struct CssModule {
   pub(crate) identifier: String,
@@ -45,9 +46,13 @@ pub(crate) struct CssModule {
 
   identifier__: Identifier,
   cacheable: bool,
+  #[cacheable(with=AsVec<AsString>)]
   file_dependencies: FxHashSet<PathBuf>,
+  #[cacheable(with=AsVec<AsString>)]
   context_dependencies: FxHashSet<PathBuf>,
+  #[cacheable(with=AsVec<AsString>)]
   missing_dependencies: FxHashSet<PathBuf>,
+  #[cacheable(with=AsVec<AsString>)]
   build_dependencies: FxHashSet<PathBuf>,
 }
 
@@ -102,6 +107,7 @@ impl CssModule {
   }
 }
 
+#[cacheable_dyn]
 #[async_trait::async_trait]
 impl Module for CssModule {
   impl_module_meta_info!();

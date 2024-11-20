@@ -1,6 +1,6 @@
 mod compilation;
 mod hmr;
-mod make;
+pub mod make;
 mod module_executor;
 use std::sync::Arc;
 

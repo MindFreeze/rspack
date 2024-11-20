@@ -1,3 +1,4 @@
+use rspack_cacheable::{cacheable, cacheable_dyn, with::AsPreset};
 use rspack_collections::IdentifierSet;
 use rspack_core::{
   AsContextDependency, AsModuleDependency, Compilation, Dependency, DependencyCategory,
@@ -8,11 +9,14 @@ use rspack_core::{
 use swc_core::ecma::atoms::Atom;
 
 // Create _webpack_require__.d(__webpack_exports__, {}) for each export.
+#[cacheable]
 #[derive(Debug, Clone)]
 pub struct ESMExportSpecifierDependency {
   id: DependencyId,
   range: DependencyRange,
+  #[cacheable(with=AsPreset)]
   pub name: Atom,
+  #[cacheable(with=AsPreset)]
   pub value: Atom, // id
 }
 
@@ -27,6 +31,7 @@ impl ESMExportSpecifierDependency {
   }
 }
 
+#[cacheable_dyn]
 impl Dependency for ESMExportSpecifierDependency {
   fn id(&self) -> &DependencyId {
     &self.id
@@ -72,6 +77,7 @@ impl Dependency for ESMExportSpecifierDependency {
 
 impl AsModuleDependency for ESMExportSpecifierDependency {}
 
+#[cacheable_dyn]
 impl DependencyTemplate for ESMExportSpecifierDependency {
   fn apply(
     &self,

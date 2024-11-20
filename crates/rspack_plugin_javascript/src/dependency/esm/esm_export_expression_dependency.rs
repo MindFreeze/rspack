@@ -1,4 +1,5 @@
 use itertools::Itertools;
+use rspack_cacheable::{cacheable, cacheable_dyn};
 use rspack_collections::{Identifier, IdentifierSet};
 use rspack_core::rspack_sources::ReplacementEnforce;
 use rspack_core::{
@@ -11,12 +12,14 @@ use swc_core::atoms::Atom;
 
 use crate::parser_plugin::JS_DEFAULT_KEYWORD;
 
+#[cacheable]
 #[derive(Debug, Clone)]
 pub enum DeclarationId {
   Id(String),
   Func(DeclarationInfo),
 }
 
+#[cacheable]
 #[derive(Debug, Clone)]
 pub struct DeclarationInfo {
   range: DependencyRange,
@@ -34,6 +37,7 @@ impl DeclarationInfo {
   }
 }
 
+#[cacheable]
 #[derive(Debug, Clone)]
 pub struct ESMExportExpressionDependency {
   id: DependencyId,
@@ -60,6 +64,7 @@ impl ESMExportExpressionDependency {
   }
 }
 
+#[cacheable_dyn]
 impl Dependency for ESMExportExpressionDependency {
   fn dependency_type(&self) -> &DependencyType {
     &DependencyType::EsmExportExpression
@@ -104,6 +109,7 @@ impl Dependency for ESMExportExpressionDependency {
 impl AsModuleDependency for ESMExportExpressionDependency {}
 impl AsContextDependency for ESMExportExpressionDependency {}
 
+#[cacheable_dyn]
 impl DependencyTemplate for ESMExportExpressionDependency {
   fn apply(
     &self,

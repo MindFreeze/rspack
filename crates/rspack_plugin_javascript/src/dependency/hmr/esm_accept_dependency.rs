@@ -1,3 +1,4 @@
+use rspack_cacheable::{cacheable, cacheable_dyn};
 use rspack_core::{
   import_statement, runtime_condition_expression, AsDependency, Compilation, DependencyId,
   DependencyRange, DependencyTemplate, RuntimeCondition, RuntimeSpec, TemplateContext,
@@ -6,6 +7,7 @@ use rspack_core::{
 
 use crate::dependency::import_emitted_runtime;
 
+#[cacheable]
 #[derive(Debug, Clone)]
 pub struct ESMAcceptDependency {
   range: DependencyRange,
@@ -31,6 +33,7 @@ impl ESMAcceptDependency {
   }
 }
 
+#[cacheable_dyn]
 impl DependencyTemplate for ESMAcceptDependency {
   fn apply(
     &self,

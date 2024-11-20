@@ -6,6 +6,10 @@ use cow_utils::CowUtils;
 use derivative::Derivative;
 use indoc::formatdoc;
 use itertools::Itertools;
+use rspack_cacheable::{
+  cacheable, cacheable_dyn,
+  with::{AsOption, AsPreset, AsVec, Unsupported},
+};
 use rspack_collections::{Identifiable, Identifier};
 use rspack_error::{impl_empty_diagnosable_trait, Diagnostic, Result};
 use rspack_macros::impl_source_map_config;
@@ -14,8 +18,7 @@ use rspack_regex::RspackRegex;
 use rspack_sources::{BoxSource, ConcatSource, RawSource, SourceExt};
 use rspack_util::itoa;
 use rspack_util::{fx_hash::FxIndexMap, json_stringify, source_map::SourceMapKind};
-use rustc_hash::FxHashMap as HashMap;
-use rustc_hash::FxHashSet as HashSet;
+use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use swc_core::atoms::Atom;
 
 use crate::{
@@ -33,6 +36,7 @@ use crate::{
 static WEBPACK_CHUNK_NAME_INDEX_PLACEHOLDER: &str = "[index]";
 static WEBPACK_CHUNK_NAME_REQUEST_PLACEHOLDER: &str = "[request]";
 
+#[cacheable]
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub enum ContextMode {
   Sync,
@@ -90,6 +94,7 @@ pub fn try_convert_str_to_context_mode(s: &str) -> Option<ContextMode> {
   }
 }
 
+#[cacheable]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ContextNameSpaceObject {
   Bool(bool),
@@ -104,12 +109,14 @@ impl ContextNameSpaceObject {
   }
 }
 
+#[cacheable]
 #[derive(Debug, Clone, Copy, Hash, PartialEq, PartialOrd, Ord, Eq)]
 pub enum ContextTypePrefix {
   Import,
   Normal,
 }
 
+#[cacheable]
 #[derive(Debug, Clone)]
 pub struct ContextOptions {
   pub mode: ContextMode,
@@ -125,13 +132,16 @@ pub struct ContextOptions {
   pub replaces: Vec<(String, u32, u32)>,
   pub start: u32,
   pub end: u32,
+  #[cacheable(with=AsOption<AsVec<AsPreset>>)]
   pub referenced_exports: Option<Vec<Atom>>,
   pub attributes: Option<ImportAttributes>,
 }
 
+#[cacheable]
 #[derive(Debug, Clone)]
 pub struct ContextModuleOptions {
   pub addon: String,
+  #[cacheable(with=AsPreset)]
   pub resource: Utf8PathBuf,
   pub resource_query: String,
   pub resource_fragment: String,
@@ -151,6 +161,7 @@ pub type ResolveContextModuleDependencies =
   Arc<dyn Fn(ContextModuleOptions) -> Result<Vec<ContextElementDependency>> + Send + Sync>;
 
 #[impl_source_map_config]
+#[cacheable]
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct ContextModule {
@@ -162,6 +173,7 @@ pub struct ContextModule {
   build_info: Option<BuildInfo>,
   build_meta: Option<BuildMeta>,
   #[derivative(Debug = "ignore")]
+  #[cacheable(with=Unsupported)]
   resolve_dependencies: ResolveContextModuleDependencies,
 }
 
@@ -821,6 +833,7 @@ impl DependenciesBlock for ContextModule {
   }
 }
 
+#[cacheable_dyn]
 #[async_trait::async_trait]
 impl Module for ContextModule {
   impl_module_meta_info!();

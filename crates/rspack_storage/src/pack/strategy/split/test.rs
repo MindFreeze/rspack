@@ -75,21 +75,32 @@ pub mod test_pack_utils {
     Ok(())
   }
 
+  pub enum UpdateVal {
+    Value(String),
+    Removed,
+  }
+
   pub fn mock_updates(
     start: usize,
     end: usize,
-    remove: bool,
+    length: usize,
+    value: UpdateVal,
   ) -> HashMap<Arc<Vec<u8>>, Option<Arc<Vec<u8>>>> {
     let mut updates = HashMap::default();
     for i in start..end {
-      let key = format!("{:0>6}_key", i);
-      let val = format!("{:0>6}_val", i);
       updates.insert(
-        Arc::new(key.as_bytes().to_vec()),
-        if remove {
-          None
-        } else {
-          Some(Arc::new(val.as_bytes().to_vec()))
+        Arc::new(
+          format!("{:0>length$}_key", i, length = length - 4)
+            .as_bytes()
+            .to_vec(),
+        ),
+        match &value {
+          UpdateVal::Value(str) => Some(Arc::new(
+            format!("{:0>length$}_{}", i, str, length = length - (str.len() + 1))
+              .as_bytes()
+              .to_vec(),
+          )),
+          UpdateVal::Removed => None,
         },
       );
     }

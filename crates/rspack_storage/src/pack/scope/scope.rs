@@ -6,7 +6,7 @@ use rustc_hash::FxHashSet as HashSet;
 use crate::pack::PackKeysState;
 use crate::pack::{Pack, PackContentsState, PackOptions, ScopeMeta};
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default)]
 pub enum ScopeMetaState {
   #[default]
   Pending,
@@ -64,7 +64,7 @@ impl ScopePacksState {
   }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct PackScope {
   pub path: PathBuf,
   pub options: Arc<PackOptions>,

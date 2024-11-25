@@ -235,8 +235,7 @@ mod tests {
   use crate::{
     pack::{
       strategy::split::test::test_pack_utils::{mock_meta_file, mock_pack_file},
-      PackFileMeta, PackFs, PackMemoryFs, PackScope, ScopeMeta, ScopeReadStrategy,
-      SplitPackStrategy,
+      PackFs, PackMemoryFs, PackScope, ScopeMeta, ScopeReadStrategy, SplitPackStrategy,
     },
     PackOptions,
   };
@@ -267,27 +266,12 @@ mod tests {
         .packs
         .iter()
         .flatten()
-        .map(|i| i.to_owned())
+        .map(|i| (i.name.as_str(), i.hash.as_str(), i.size, i.writed))
         .collect_vec(),
       vec![
-        PackFileMeta {
-          name: "pack_name_0_0".to_string(),
-          hash: "pack_hash_0_0".to_string(),
-          size: 100,
-          writed: true
-        },
-        PackFileMeta {
-          name: "pack_name_0_1".to_string(),
-          hash: "pack_hash_0_1".to_string(),
-          size: 100,
-          writed: true
-        },
-        PackFileMeta {
-          name: "pack_name_0_2".to_string(),
-          hash: "pack_hash_0_2".to_string(),
-          size: 100,
-          writed: true
-        }
+        ("pack_name_0_0", "pack_hash_0_0", 100, true),
+        ("pack_name_0_1", "pack_hash_0_1", 100, true),
+        ("pack_name_0_2", "pack_hash_0_2", 100, true),
       ]
     );
 

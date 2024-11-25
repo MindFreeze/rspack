@@ -84,7 +84,7 @@ pub trait ScopeWriteStrategy {
   async fn update_scope(
     &self,
     scope: &mut PackScope,
-    updates: HashMap<Vec<u8>, Option<Vec<u8>>>,
+    updates: HashMap<Arc<Vec<u8>>, Option<Arc<Vec<u8>>>>,
   ) -> Result<()>;
   async fn write_scope(&self, scope: &mut PackScope) -> Result<WriteScopeResult>;
   async fn write_packs(&self, scope: &mut PackScope) -> Result<WriteScopeResult>;

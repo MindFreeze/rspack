@@ -108,7 +108,15 @@ async fn save_scopes(
       .map(|(name, scope)| (scope, updates.remove(name).unwrap_or_default()))
       .collect_vec()
       .into_iter()
-      .map(|(scope, updates)| strategy.update_scope(scope, updates)),
+      .map(|(scope, updates)| {
+        strategy.update_scope(
+          scope,
+          updates
+            .into_iter()
+            .map(|(key, val)| (Arc::new(key), val.map(|val| Arc::new(val))))
+            .collect::<HashMap<Arc<Vec<u8>>, Option<Arc<Vec<u8>>>>>(),
+        )
+      }),
   );
 
   update_tasks.await.into_iter().collect::<Result<()>>()?;

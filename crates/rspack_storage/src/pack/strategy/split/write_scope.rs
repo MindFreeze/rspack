@@ -37,7 +37,7 @@ impl ScopeWriteStrategy for SplitPackStrategy {
   async fn update_scope(
     &self,
     scope: &mut PackScope,
-    updates: HashMap<Vec<u8>, Option<Vec<u8>>>,
+    updates: HashMap<Arc<Vec<u8>>, Option<Arc<Vec<u8>>>>,
   ) -> Result<()> {
     if !scope.loaded() {
       return Err(error!("scope not loaded, run `get_all` first"));
@@ -57,10 +57,7 @@ impl ScopeWriteStrategy for SplitPackStrategy {
       .fold(
         HashMap::<usize, HashMap<Arc<Vec<u8>>, Option<Arc<Vec<u8>>>>>::default(),
         |mut res, (bucket_id, key, value)| {
-          res
-            .entry(bucket_id)
-            .or_default()
-            .insert(Arc::new(key.to_owned()), value.to_owned().map(Arc::new));
+          res.entry(bucket_id).or_default().insert(key, value);
           res
         },
       );
@@ -276,7 +273,7 @@ mod tests {
   use crate::{
     pack::{
       strategy::split::test::test_pack_utils::{
-        count_bucket_packs, count_scope_packs, get_bucket_pack_sizes,
+        count_bucket_packs, count_scope_packs, get_bucket_pack_sizes, mock_updates, UpdateVal,
       },
       PackFs, PackMemoryFs, PackScope, ScopeWriteStrategy, SplitPackStrategy,
     },
@@ -286,32 +283,26 @@ mod tests {
   async fn test_short_value(
     scope: &mut PackScope,
     strategy: &SplitPackStrategy,
-    pre: usize,
-    size: usize,
+    start: usize,
+    end: usize,
   ) -> Result<()> {
-    let mut updates = HashMap::default();
-
-    for i in pre..pre + size {
-      let key = format!("{:0>4}_key", i);
-      let val = format!("{:0>4}_val", i);
-      updates.insert(key.as_bytes().to_vec(), Some(val.as_bytes().to_vec()));
-    }
+    let updates = mock_updates(start, end, 8, UpdateVal::Value("val".into()));
     strategy.update_scope(scope, updates).await?;
 
     let contents = scope.get_contents().into_iter().collect::<HashMap<_, _>>();
 
-    assert_eq!(contents.len(), pre + size);
+    assert_eq!(contents.len(), end);
     assert_eq!(
       **contents
-        .get(&format!("{:0>4}_key", pre).as_bytes().to_vec())
+        .get(&format!("{:0>4}_key", start).as_bytes().to_vec())
         .expect("should have key"),
-      format!("{:0>4}_val", pre).as_bytes().to_vec()
+      format!("{:0>4}_val", start).as_bytes().to_vec()
     );
     assert_eq!(
       **contents
-        .get(&format!("{:0>4}_key", pre + size - 1).as_bytes().to_vec())
+        .get(&format!("{:0>4}_key", end - 1).as_bytes().to_vec())
         .expect("should have key"),
-      format!("{:0>4}_val", pre + size - 1).as_bytes().to_vec()
+      format!("{:0>4}_val", end - 1).as_bytes().to_vec()
     );
 
     Ok(())
@@ -320,42 +311,33 @@ mod tests {
   async fn test_long_value(
     scope: &mut PackScope,
     strategy: &SplitPackStrategy,
-    size: usize,
+    start: usize,
+    end: usize,
   ) -> Result<()> {
-    let mut updates = HashMap::default();
-
-    for i in 0..size {
-      let key = format!("{:0>20}_key", i);
-      let val = format!("{:0>20}_val", i);
-      updates.insert(key.as_bytes().to_vec(), Some(val.as_bytes().to_vec()));
-    }
+    let updates = mock_updates(start, end, 24, UpdateVal::Value("val".into()));
 
     let pre_item_count = scope.get_contents().len();
     strategy.update_scope(scope, updates).await?;
     let contents = scope.get_contents().into_iter().collect::<HashMap<_, _>>();
 
-    assert_eq!(contents.len(), pre_item_count + size);
+    assert_eq!(contents.len(), pre_item_count + end - start);
     assert_eq!(
       **contents
-        .get(&format!("{:0>20}_key", 0).as_bytes().to_vec())
+        .get(&format!("{:0>20}_key", start).as_bytes().to_vec())
         .expect("should have key"),
-      format!("{:0>20}_val", 0).as_bytes().to_vec()
+      format!("{:0>20}_val", start).as_bytes().to_vec()
     );
     assert_eq!(
       **contents
-        .get(&format!("{:0>20}_key", size - 1).as_bytes().to_vec())
+        .get(&format!("{:0>20}_key", end - 1).as_bytes().to_vec())
         .expect("should have key"),
-      format!("{:0>20}_val", size - 1).as_bytes().to_vec()
+      format!("{:0>20}_val", end - 1).as_bytes().to_vec()
     );
     Ok(())
   }
 
   async fn test_update_value(scope: &mut PackScope, strategy: &SplitPackStrategy) -> Result<()> {
-    let mut updates = HashMap::default();
-    let key = format!("{:0>4}_key", 0);
-    let val = format!("{:0>4}_new", 0);
-    updates.insert(key.as_bytes().to_vec(), Some(val.as_bytes().to_vec()));
-
+    let updates = mock_updates(0, 1, 8, UpdateVal::Value("new".into()));
     let pre_item_count = scope.get_contents().len();
     strategy.update_scope(scope, updates).await?;
     let contents = scope.get_contents().into_iter().collect::<HashMap<_, _>>();
@@ -373,9 +355,7 @@ mod tests {
   }
 
   async fn test_remove_value(scope: &mut PackScope, strategy: &SplitPackStrategy) -> Result<()> {
-    let mut updates = HashMap::default();
-    let key = format!("{:0>4}_key", 1);
-    updates.insert(key.as_bytes().to_vec(), None);
+    let updates = mock_updates(1, 2, 8, UpdateVal::Removed);
     let pre_item_count = scope.get_contents().len();
     strategy.update_scope(scope, updates).await?;
     let contents = scope.get_contents().into_iter().collect::<HashMap<_, _>>();
@@ -395,7 +375,7 @@ mod tests {
     assert_eq!(res.writed_files.len(), 6);
     assert_eq!(res.removed_files.len(), 0);
 
-    test_long_value(scope, strategy, 5).await?;
+    test_long_value(scope, strategy, 10, 15).await?;
     assert_eq!(count_scope_packs(&scope), 10);
     let res = strategy.write_scope(scope).await?;
     // 5 packs + 1 meta
@@ -428,7 +408,7 @@ mod tests {
     assert_eq!(res.writed_files.len(), 51);
     assert_eq!(res.removed_files.len(), 0);
 
-    test_long_value(scope, strategy, 50).await?;
+    test_long_value(scope, strategy, 100, 150).await?;
     assert_eq!(count_bucket_packs(&scope), vec![10; 10]);
     let res = strategy.write_scope(scope).await?;
     // 50 packs + 1 meta
@@ -459,17 +439,17 @@ mod tests {
     assert_eq!(get_bucket_pack_sizes(&scope), [1200, 2000]);
 
     // 3200 + 100 * 16 = 4800 = 2000 + 2000 + 800
-    test_short_value(scope, strategy, 200, 100).await?;
+    test_short_value(scope, strategy, 200, 300).await?;
     assert_eq!(count_scope_packs(&scope), 3);
     assert_eq!(get_bucket_pack_sizes(&scope), [800, 2000, 2000]);
 
     // 4800 + 60 * 16 = 5760 = 2000 + 2000 + 1760(>1600)
-    test_short_value(scope, strategy, 300, 60).await?;
+    test_short_value(scope, strategy, 300, 360).await?;
     assert_eq!(count_scope_packs(&scope), 3);
     assert_eq!(get_bucket_pack_sizes(&scope), [1760, 2000, 2000]);
 
     // 5760 + 160 = 5920 = 2000 + 2000 + 1760(>1600) + 160
-    test_short_value(scope, strategy, 360, 10).await?;
+    test_short_value(scope, strategy, 360, 370).await?;
     assert_eq!(count_scope_packs(&scope), 4);
     assert_eq!(get_bucket_pack_sizes(&scope), [160, 1760, 2000, 2000]);
 

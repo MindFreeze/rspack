@@ -15,14 +15,14 @@ type ScopeMap = HashMap<&'static str, PackScope>;
 
 #[derive(Debug)]
 pub struct ScopeManager {
-  pub strategy: Arc<Box<dyn ScopeStrategy>>,
+  pub strategy: Arc<dyn ScopeStrategy>,
   pub options: Arc<PackOptions>,
   pub scopes: Arc<Mutex<ScopeMap>>,
   pub queue: TaskQueue,
 }
 
 impl ScopeManager {
-  pub fn new(options: PackOptions, strategy: Arc<Box<dyn ScopeStrategy>>) -> Self {
+  pub fn new(options: PackOptions, strategy: Arc<dyn ScopeStrategy>) -> Self {
     ScopeManager {
       strategy,
       options: Arc::new(options),
@@ -74,7 +74,7 @@ impl ScopeManager {
 
 async fn validate_scope(
   scope: &mut PackScope,
-  strategy: &Box<dyn ScopeStrategy>,
+  strategy: &dyn ScopeStrategy,
 ) -> Result<ValidateResult> {
   strategy.ensure_meta(scope).await?;
 
@@ -92,7 +92,7 @@ async fn save_scopes(
   mut scopes: ScopeMap,
   mut updates: ScopeUpdates,
   options: Arc<PackOptions>,
-  strategy: &Box<dyn ScopeStrategy>,
+  strategy: &dyn ScopeStrategy,
 ) -> Result<ScopeMap> {
   strategy.before_save().await?;
 

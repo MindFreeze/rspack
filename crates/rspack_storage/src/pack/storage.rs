@@ -28,11 +28,11 @@ pub struct PackStorageOptions {
 
 impl PackStorage {
   pub fn new(options: PackStorageOptions) -> Self {
-    let strategy: Arc<Box<dyn ScopeStrategy>> = Arc::new(Box::new(SplitPackStrategy::new(
+    let strategy: Arc<dyn ScopeStrategy> = Arc::new(SplitPackStrategy::new(
       options.root,
       options.temp_root,
       options.fs,
-    )));
+    ));
     Self {
       manager: ScopeManager::new(
         PackOptions {

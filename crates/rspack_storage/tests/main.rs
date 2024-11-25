@@ -144,16 +144,4 @@ mod test_storage {
 
     // rt.block_on(test_parallel());
   }
-
-  // #[test]
-  // fn case() {
-  //   let ends_with_js = regex!("\\.js$");
-  //   let ends_with_js_ignore_case = regex!("\\.js$", i);
-  //   // case sensitive
-  //   assert!(ends_with_js.test(".js"));
-  //   assert!(!ends_with_js.test(".JS"));
-  //   // ignore case
-  //   assert!(ends_with_js_ignore_case.test(".js"));
-  //   assert!(ends_with_js_ignore_case.test(".JS"));
-  // }
 }

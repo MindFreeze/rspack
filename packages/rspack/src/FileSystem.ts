@@ -1,7 +1,7 @@
 import util from "node:util";
 import type { NodeFsStats, ThreadsafeNodeFS } from "@rspack/binding";
 
-import { type IStats, type OutputFileSystem, mkdirp, rmrf } from "./util/fs";
+import { type IStats, IntermediateFileSystem, type OutputFileSystem, mkdirp, rmrf } from "./util/fs";
 import { memoizeFn } from "./util/memoize";
 
 const NOOP_FILESYSTEM: ThreadsafeNodeFS = {
@@ -77,7 +77,6 @@ class ThreadsafeWritableNodeFS implements ThreadsafeNodeFS {
 				return res && ThreadsafeWritableNodeFS.__to_binding_stat(res);
 			};
 		});
-		this.renameFile = memoizeFn(() => util.promisify(fs.rename.bind(fs)));
 	}
 
 	static __to_binding(fs?: OutputFileSystem) {
@@ -97,4 +96,21 @@ class ThreadsafeWritableNodeFS implements ThreadsafeNodeFS {
 	}
 }
 
-export { ThreadsafeWritableNodeFS };
+class ThreadsafeIntermediateNodeFS extends ThreadsafeWritableNodeFS {
+	renameFile!: (
+		from: string,
+		to: string
+	) => Promise<void> | void;
+
+	constructor(fs?: IntermediateFileSystem) {
+		super(fs);
+		if (!fs) {
+			// This happens when located in a child compiler.
+			Object.assign(this, NOOP_FILESYSTEM);
+			return;
+		}
+		this.renameFile = memoizeFn(() => util.promisify(fs.rename.bind(fs)));
+	}
+}
+
+export { ThreadsafeWritableNodeFS, ThreadsafeIntermediateNodeFS };

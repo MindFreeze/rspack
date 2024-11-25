@@ -69,6 +69,7 @@ import type {
 } from "./config";
 import type {
 	InputFileSystem,
+	IntermediateFileSystem,
 	OutputFileSystem,
 	WatchFileSystem
 } from "./util/fs";
@@ -145,7 +146,7 @@ class Compiler {
 	watching?: Watching;
 
 	inputFileSystem: InputFileSystem | null;
-	intermediateFileSystem: any;
+	intermediateFileSystem: IntermediateFileSystem | null;
 	outputFileSystem: OutputFileSystem | null;
 	watchFileSystem: WatchFileSystem | null;
 
@@ -731,7 +732,7 @@ class Compiler {
 		this.#compilation = undefined;
 		// ensure thisCompilation must call
 		this.hooks.thisCompilation.intercept({
-			call: () => {}
+			call: () => { }
 		});
 	}
 
@@ -1457,8 +1458,8 @@ class Compiler {
 						) {
 							const data = bindingData
 								? ContextModuleFactoryBeforeResolveData.__from_binding(
-										bindingData
-									)
+									bindingData
+								)
 								: false;
 							const result = await queried.promise(data);
 							return result
@@ -1485,8 +1486,8 @@ class Compiler {
 						) {
 							const data = bindingData
 								? ContextModuleFactoryAfterResolveData.__from_binding(
-										bindingData
-									)
+									bindingData
+								)
 								: false;
 							const result = await queried.promise(data);
 							return result

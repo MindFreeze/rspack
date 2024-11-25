@@ -119,8 +119,13 @@ export interface OutputFileSystem {
 	join?: (arg0: string, arg1: string) => string;
 	relative?: (arg0: string, arg1: string) => string;
 	dirname?: (arg0: string) => string;
+}
+
+export interface IntermediateFileSystemExtras {
 	rename: (arg0: string, arg1: string, arg2: (arg0?: null | NodeJS.ErrnoException) => void) => void;
 }
+
+export type IntermediateFileSystem = OutputFileSystem & IntermediateFileSystemExtras & InputFileSystem;
 
 export type JsonPrimitive = string | number | boolean | null;
 export type JsonArray = JsonValue[];

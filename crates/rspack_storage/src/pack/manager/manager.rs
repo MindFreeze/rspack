@@ -37,9 +37,12 @@ impl ScopeManager {
 
     let (tx, rx) = oneshot::channel();
     self.queue.add_task(Box::pin(async move {
-      let scopes = std::mem::take(&mut *scopes.lock().await);
-      let _ = match save_scopes(scopes, updates, options, strategy.as_ref()).await {
-        Ok(_) => tx.send(Ok(())),
+      let old_scopes = std::mem::take(&mut *scopes.lock().await);
+      let _ = match save_scopes(old_scopes, updates, options, strategy.as_ref()).await {
+        Ok(new_scopes) => {
+          let _ = std::mem::replace(&mut *scopes.lock().await, new_scopes);
+          tx.send(Ok(()))
+        }
         Err(e) => tx.send(Err(e)),
       };
     }));

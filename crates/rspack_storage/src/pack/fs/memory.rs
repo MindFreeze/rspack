@@ -84,22 +84,9 @@ impl PackFs for PackMemoryFs {
   }
 
   async fn move_file(&self, from: &PathBuf, to: &PathBuf) -> Result<()> {
-    // TODO: output file system rename method
-    let from_path = from.to_owned().assert_utf8();
-    let to_path = to.to_owned().assert_utf8();
-    let content = self
-      .0
-      .read_file(&from_path)
-      .await
-      .map_err(|e| PackFsError::from_fs_error(from, PackFsErrorOpt::Move, e))?;
     self
       .0
-      .write(&to_path, &content)
-      .await
-      .map_err(|e| PackFsError::from_fs_error(from, PackFsErrorOpt::Move, e))?;
-    self
-      .0
-      .remove_file(&from_path)
+      .rename(&from.to_owned().assert_utf8(), &to.to_owned().assert_utf8())
       .await
       .map_err(|e| PackFsError::from_fs_error(from, PackFsErrorOpt::Move, e))?;
     Ok(())

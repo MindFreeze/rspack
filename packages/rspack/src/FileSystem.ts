@@ -5,15 +5,16 @@ import { type IStats, type OutputFileSystem, mkdirp, rmrf } from "./util/fs";
 import { memoizeFn } from "./util/memoize";
 
 const NOOP_FILESYSTEM: ThreadsafeNodeFS = {
-	writeFile() {},
-	removeFile() {},
-	mkdir() {},
-	mkdirp() {},
-	removeDirAll() {},
-	readDir: () => {},
-	readFile: () => {},
-	stat: () => {},
-	lstat: () => {}
+	writeFile() { },
+	removeFile() { },
+	mkdir() { },
+	mkdirp() { },
+	removeDirAll() { },
+	readDir: () => { },
+	readFile: () => { },
+	stat: () => { },
+	lstat: () => { },
+	renameFile: () => { },
 };
 
 class ThreadsafeWritableNodeFS implements ThreadsafeNodeFS {
@@ -28,6 +29,10 @@ class ThreadsafeWritableNodeFS implements ThreadsafeNodeFS {
 	) => Promise<Buffer | string | void> | Buffer | string | void;
 	stat!: (name: string) => Promise<NodeFsStats | void> | NodeFsStats | void;
 	lstat!: (name: string) => Promise<NodeFsStats | void> | NodeFsStats | void;
+	renameFile!: (
+		from: string,
+		to: string
+	) => Promise<void> | void;
 
 	constructor(fs?: OutputFileSystem) {
 		if (!fs) {
@@ -72,6 +77,7 @@ class ThreadsafeWritableNodeFS implements ThreadsafeNodeFS {
 				return res && ThreadsafeWritableNodeFS.__to_binding_stat(res);
 			};
 		});
+		this.renameFile = memoizeFn(() => util.promisify(fs.rename.bind(fs)));
 	}
 
 	static __to_binding(fs?: OutputFileSystem) {

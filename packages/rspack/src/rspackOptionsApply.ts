@@ -276,10 +276,10 @@ export class RspackOptionsApply {
 				lazyOptions.imports ?? true,
 				typeof lazyOptions.test === "function"
 					? jsModule =>
-							(lazyOptions.test as (jsModule: Module) => boolean)!.call(
-								lazyOptions,
-								new Module(jsModule)
-							)
+						(lazyOptions.test as (jsModule: Module) => boolean)!.call(
+							lazyOptions,
+							new Module(jsModule)
+						)
 					: lazyOptions.test,
 				lazyOptions.backend
 			).apply(compiler);

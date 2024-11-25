@@ -24,6 +24,8 @@ pub struct ThreadsafeNodeFS {
   pub stat: ThreadsafeFunction<String, Either<NodeFsStats, ()>>,
   #[napi(ts_type = "(name: string) => Promise<NodeFsStats | void> | NodeFsStats | void")]
   pub lstat: ThreadsafeFunction<String, Either<NodeFsStats, ()>>,
+  #[napi(ts_type = "(from: string, to: string) => Promise<void> | void")]
+  pub rename_file: ThreadsafeFunction<(String, String), ()>,
 }
 
 #[napi(object, object_to_js = false)]

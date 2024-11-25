@@ -7,7 +7,7 @@ use rspack_error::Result;
 use rustc_hash::FxHashMap as HashMap;
 use tokio::sync::oneshot::Receiver;
 
-use super::{PackFs, PackOptions, ScopeManager, SplitPackStrategy, Strategy};
+use super::{PackFs, PackOptions, ScopeManager, ScopeStrategy, SplitPackStrategy};
 use crate::Storage;
 
 pub type ScopeUpdates = HashMap<&'static str, HashMap<Vec<u8>, Option<Vec<u8>>>>;
@@ -28,7 +28,7 @@ pub struct PackStorageOptions {
 
 impl PackStorage {
   pub fn new(options: PackStorageOptions) -> Self {
-    let strategy: Arc<Box<dyn Strategy>> = Arc::new(Box::new(SplitPackStrategy::new(
+    let strategy: Arc<Box<dyn ScopeStrategy>> = Arc::new(Box::new(SplitPackStrategy::new(
       options.root,
       options.temp_root,
       options.fs,

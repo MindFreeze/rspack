@@ -1,23 +1,9 @@
-use std::{
-  path::PathBuf,
-  time::{SystemTime, UNIX_EPOCH},
-};
-
 use async_trait::async_trait;
 use futures::{future::join_all, TryFutureExt};
-use itertools::Itertools;
 use rspack_error::{error, Result};
 
 use super::{util::get_indexed_packs, SplitPackStrategy};
-use crate::pack::{PackContents, PackKeys, PackScope, ScopeValidateStrategy, ValidateResult};
-
-#[derive(Debug)]
-pub struct ValidatingPack {
-  pub path: PathBuf,
-  pub hash: String,
-  pub keys: PackKeys,
-  pub contents: PackContents,
-}
+use crate::pack::{PackScope, ScopeValidateStrategy, ValidateResult};
 
 #[async_trait]
 impl ScopeValidateStrategy for SplitPackStrategy {
@@ -27,12 +13,7 @@ impl ScopeValidateStrategy for SplitPackStrategy {
       return Ok(ValidateResult::Invalid("scope options changed".to_string()));
     }
 
-    let current_time = SystemTime::now()
-      .duration_since(UNIX_EPOCH)
-      .expect("get current time failed")
-      .as_secs();
-
-    if current_time - meta.last_modified > scope.options.expires {
+    if scope.options.is_expired(&meta.last_modified) {
       return Ok(ValidateResult::Invalid("scope expired".to_string()));
     }
 
@@ -42,44 +23,30 @@ impl ScopeValidateStrategy for SplitPackStrategy {
   async fn validate_packs(&self, scope: &mut PackScope) -> Result<ValidateResult> {
     let (_, pack_list) = get_indexed_packs(scope)?;
 
-    let candidates = pack_list
-      .into_iter()
-      .map(|(pack_meta, pack)| ValidatingPack {
-        path: pack.path.to_owned(),
-        hash: pack_meta.hash.to_owned(),
-        keys: pack.keys.expect_value().to_owned(),
-        contents: pack.keys.expect_value().to_owned(),
+    let tasks = pack_list.into_iter().map(|(pack_meta, pack)| {
+      let strategy = self.clone();
+      let path = pack.path.to_owned();
+      let hash = pack_meta.hash.to_owned();
+      let keys = pack.keys.expect_value().to_owned();
+      let contents = pack.contents.expect_value().to_owned();
+      tokio::spawn(async move {
+        match strategy.get_pack_hash(&path, &keys, &contents).await {
+          Ok(res) => hash == res,
+          Err(_) => false,
+        }
       })
-      .collect_vec();
-    let validate_results = batch_validate_packs(candidates, self).await?;
+      .map_err(|e| error!("{}", e))
+    });
+
+    let validate_results = join_all(tasks)
+      .await
+      .into_iter()
+      .collect::<Result<Vec<bool>>>()?;
     if validate_results.into_iter().all(|v| v) {
       Ok(ValidateResult::Valid)
     } else {
+      // TODO: pack invalid detail
       Ok(ValidateResult::Invalid("packs is not validate".to_string()))
     }
   }
-}
-
-async fn batch_validate_packs(
-  candidates: Vec<ValidatingPack>,
-  strategy: &SplitPackStrategy,
-) -> Result<Vec<bool>> {
-  let tasks = candidates.into_iter().map(|pack| {
-    let strategy = strategy.clone();
-    tokio::spawn(async move {
-      match strategy
-        .get_pack_hash(&pack.path, &pack.keys, &pack.contents)
-        .await
-      {
-        Ok(res) => pack.hash == res,
-        Err(_) => false,
-      }
-    })
-    .map_err(|e| error!("{}", e))
-  });
-
-  join_all(tasks)
-    .await
-    .into_iter()
-    .collect::<Result<Vec<bool>>>()
 }

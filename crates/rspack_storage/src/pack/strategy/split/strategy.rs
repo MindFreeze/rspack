@@ -5,7 +5,7 @@ use rspack_error::{error, Result};
 use rustc_hash::FxHasher;
 
 use super::util::get_name;
-use crate::pack::{PackContents, PackFs, PackKeys, PackStrategy, ScopeStrategy, Strategy};
+use crate::pack::{PackContents, PackFs, PackKeys, ScopeStrategy};
 
 #[derive(Debug, Clone)]
 pub struct SplitPackStrategy {
@@ -82,6 +82,4 @@ impl SplitPackStrategy {
   }
 }
 
-impl Strategy for SplitPackStrategy {}
-impl PackStrategy for SplitPackStrategy {}
 impl ScopeStrategy for SplitPackStrategy {}

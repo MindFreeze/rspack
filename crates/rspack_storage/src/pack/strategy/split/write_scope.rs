@@ -126,7 +126,7 @@ impl ScopeWriteStrategy for SplitPackStrategy {
 
       for (pack_meta, pack) in bucket_result.new_packs {
         scope_packs[bucket_id].push(pack);
-        scope_meta.packs[bucket_id].push(Arc::new(pack_meta));
+        scope_meta.packs[bucket_id].push(pack_meta);
       }
 
       scope.removed.extend(bucket_result.removed_files);
@@ -164,12 +164,12 @@ impl ScopeWriteStrategy for SplitPackStrategy {
     for ((_, meta), (hash, path, size)) in candidates.iter_mut().zip(write_results.into_iter()) {
       let _ = std::mem::replace(
         *meta,
-        Arc::new(PackFileMeta {
+        PackFileMeta {
           hash,
           size,
           name: meta.name.clone(),
           writed: true,
-        }),
+        },
       );
       writed_files.insert(path);
     }

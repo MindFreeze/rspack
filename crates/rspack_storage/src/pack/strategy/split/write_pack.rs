@@ -19,7 +19,7 @@ impl PackWriteStrategy for SplitPackStrategy {
     &self,
     dir: PathBuf,
     options: &PackOptions,
-    mut packs: HashMap<Arc<PackFileMeta>, Pack>,
+    mut packs: HashMap<PackFileMeta, Pack>,
     mut updates: HashMap<Arc<Vec<u8>>, Option<Arc<Vec<u8>>>>,
   ) -> UpdatePacksResult {
     let update_to_meta = packs
@@ -319,7 +319,7 @@ mod tests {
     updates
   }
 
-  fn update_packs(update_res: UpdatePacksResult) -> HashMap<Arc<PackFileMeta>, Pack> {
+  fn update_packs(update_res: UpdatePacksResult) -> HashMap<PackFileMeta, Pack> {
     update_res
       .remain_packs
       .into_iter()
@@ -327,9 +327,9 @@ mod tests {
         update_res
           .new_packs
           .into_iter()
-          .map(|(meta, pack)| (Arc::new(meta), pack)),
+          .map(|(meta, pack)| (meta, pack)),
       )
-      .collect::<HashMap<Arc<PackFileMeta>, Pack>>()
+      .collect::<HashMap<PackFileMeta, Pack>>()
   }
 
   fn get_pack_sizes(update_res: &UpdatePacksResult) -> Vec<usize> {

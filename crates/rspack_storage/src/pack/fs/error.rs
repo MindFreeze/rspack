@@ -1,8 +1,9 @@
 use std::path::PathBuf;
 
 use rspack_error::{
-  miette::{self},
+  miette::{self, MietteError},
   thiserror::{self, Error},
+  Error,
 };
 
 #[derive(Debug)]
@@ -32,7 +33,7 @@ impl std::fmt::Display for PackFsErrorOpt {
 #[error(r#"Rspack Storage FS Error: {opt} `{file}` failed with `{inner}`"#)]
 pub struct PackFsError {
   file: String,
-  inner: String,
+  inner: Error,
   opt: PackFsErrorOpt,
 }
 
@@ -40,14 +41,14 @@ impl PackFsError {
   pub fn from_io_error(file: &PathBuf, opt: PackFsErrorOpt, error: std::io::Error) -> Self {
     Self {
       file: file.to_string_lossy().to_string(),
-      inner: error.to_string(),
+      inner: MietteError::IoError(error).into(),
       opt,
     }
   }
   pub fn from_fs_error(file: &PathBuf, opt: PackFsErrorOpt, error: rspack_fs::Error) -> Self {
     Self {
       file: file.to_string_lossy().to_string(),
-      inner: error.to_string(),
+      inner: error.into(),
       opt,
     }
   }
@@ -56,5 +57,14 @@ impl PackFsError {
 impl miette::Diagnostic for PackFsError {
   fn code<'a>(&'a self) -> Option<Box<dyn std::fmt::Display + 'a>> {
     Some(Box::new("PackFsError"))
+  }
+  fn severity(&self) -> Option<miette::Severity> {
+    Some(miette::Severity::Warning)
+  }
+  fn url<'a>(&'a self) -> Option<Box<dyn std::fmt::Display + 'a>> {
+    Some(Box::new(self.file.clone()))
+  }
+  fn diagnostic_source(&self) -> Option<&dyn miette::Diagnostic> {
+    Some(self.inner.as_ref())
   }
 }

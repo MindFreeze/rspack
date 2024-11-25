@@ -12,6 +12,3 @@ pub use fs::*;
 
 mod manager;
 pub use manager::*;
-
-mod options;
-pub use options::*;

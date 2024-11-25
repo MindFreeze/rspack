@@ -123,15 +123,15 @@ async fn read_scope_meta(path: &PathBuf, fs: Arc<dyn PackFs>) -> Result<Option<S
           if i.len() < 3 {
             Err(error!("parse pack file info failed"))
           } else {
-            Ok(Arc::new(PackFileMeta {
+            Ok(PackFileMeta {
               name: i[0].to_owned(),
               hash: i[1].to_owned(),
               size: i[2].parse::<usize>().expect("should parse pack size"),
               writed: true,
-            }))
+            })
           }
         })
-        .collect::<Result<Vec<Arc<PackFileMeta>>>>()?,
+        .collect::<Result<Vec<PackFileMeta>>>()?,
     );
   }
 
@@ -267,7 +267,7 @@ mod tests {
         .packs
         .iter()
         .flatten()
-        .map(|i| i.as_ref().to_owned())
+        .map(|i| i.to_owned())
         .collect_vec(),
       vec![
         PackFileMeta {

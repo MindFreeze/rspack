@@ -1,4 +1,4 @@
-use std::{hash::Hasher, sync::Arc};
+use std::hash::Hasher;
 
 use itertools::Itertools;
 use rspack_error::Result;
@@ -8,7 +8,7 @@ use crate::pack::{Pack, PackContents, PackFileMeta, PackKeys, PackScope};
 
 pub fn get_indexed_packs(
   scope: &PackScope,
-) -> Result<(Vec<(usize, usize)>, Vec<(Arc<PackFileMeta>, &Pack)>)> {
+) -> Result<(Vec<(usize, usize)>, Vec<(PackFileMeta, &Pack)>)> {
   let meta = scope.meta.expect_value();
   let packs = scope.packs.expect_value();
 

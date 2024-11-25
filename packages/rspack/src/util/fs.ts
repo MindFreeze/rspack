@@ -119,6 +119,7 @@ export interface OutputFileSystem {
 	join?: (arg0: string, arg1: string) => string;
 	relative?: (arg0: string, arg1: string) => string;
 	dirname?: (arg0: string) => string;
+	rename: (arg0: string, arg1: string, arg2: (arg0?: null | NodeJS.ErrnoException) => void) => void;
 }
 
 export type JsonPrimitive = string | number | boolean | null;
@@ -190,9 +191,9 @@ export type ReadFile = {
 		path: PathOrFileDescriptor,
 		options:
 			| ({
-					encoding: null | undefined;
-					flag?: string;
-			  } & Abortable)
+				encoding: null | undefined;
+				flag?: string;
+			} & Abortable)
 			| null
 			| undefined,
 		callback: BufferCallback
@@ -277,10 +278,10 @@ export type Readdir = {
 		path: PathLike,
 		options:
 			| {
-					encoding: BufferEncoding | null;
-					withFileTypes?: false;
-					recursive?: boolean;
-			  }
+				encoding: BufferEncoding | null;
+				withFileTypes?: false;
+				recursive?: boolean;
+			}
 			| BufferEncoding
 			| null
 			| undefined,
@@ -318,10 +319,10 @@ export type ReaddirSync = {
 		path: PathLike,
 		options:
 			| {
-					encoding: BufferEncoding | null;
-					withFileTypes?: false;
-					recursive?: boolean;
-			  }
+				encoding: BufferEncoding | null;
+				withFileTypes?: false;
+				recursive?: boolean;
+			}
 			| BufferEncoding
 			| null
 	): string[];

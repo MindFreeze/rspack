@@ -135,6 +135,17 @@ impl MemoryFileSystem {
     }
     Ok(res.into_iter().collect())
   }
+
+  fn _rename_file(&self, from: &Utf8Path, to: &Utf8Path) -> Result<()> {
+    if !self.contains_file(from)? {
+      return Err(new_error("from dir not exist"));
+    }
+    let mut files = self.files.lock().expect("should get lock");
+    let file = files.remove(from).expect("should have file");
+    files.insert(to.into(), file);
+
+    Ok(())
+  }
 }
 #[async_trait::async_trait]
 impl WritableFileSystem for MemoryFileSystem {
@@ -218,6 +229,11 @@ impl WritableFileSystem for MemoryFileSystem {
 
   fn stat<'a>(&'a self, file: &'a Utf8Path) -> BoxFuture<'a, Result<FileMetadata>> {
     let fut = async move { ReadableFileSystem::metadata(self, file) };
+    Box::pin(fut)
+  }
+
+  fn rename<'a>(&'a self, from: &'a Utf8Path, to: &'a Utf8Path) -> BoxFuture<'a, Result<()>> {
+    let fut = async move { self._rename_file(from, to) };
     Box::pin(fut)
   }
 }

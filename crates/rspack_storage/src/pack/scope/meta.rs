@@ -1,6 +1,5 @@
 use std::{
   path::PathBuf,
-  sync::Arc,
   time::{SystemTime, UNIX_EPOCH},
 };
 
@@ -20,7 +19,7 @@ pub struct ScopeMeta {
   pub buckets: usize,
   pub max_pack_size: usize,
   pub last_modified: u64,
-  pub packs: Vec<Vec<Arc<PackFileMeta>>>,
+  pub packs: Vec<Vec<PackFileMeta>>,
 }
 impl ScopeMeta {
   pub fn new(dir: &PathBuf, options: &PackOptions) -> Self {

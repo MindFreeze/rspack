@@ -11,18 +11,15 @@ use crate::{
 
 pub struct UpdatePacksResult {
   pub new_packs: Vec<(PackFileMeta, Pack)>,
-  pub remain_packs: Vec<(Arc<PackFileMeta>, Pack)>,
+  pub remain_packs: Vec<(PackFileMeta, Pack)>,
   pub removed_files: Vec<PathBuf>,
 }
 
 #[async_trait]
-pub trait Strategy: PackStrategy + ScopeStrategy + std::fmt::Debug + Sync + Send {}
-
-#[async_trait]
-pub trait ScopeStrategy: ScopeReadStrategy + ScopeWriteStrategy {}
-
-#[async_trait]
-pub trait PackStrategy: PackReadStrategy + PackWriteStrategy + ScopeValidateStrategy {}
+pub trait ScopeStrategy:
+  ScopeReadStrategy + ScopeWriteStrategy + ScopeValidateStrategy + std::fmt::Debug + Sync + Send
+{
+}
 
 #[async_trait]
 pub trait PackReadStrategy {
@@ -36,7 +33,7 @@ pub trait PackWriteStrategy {
     &self,
     dir: PathBuf,
     options: &PackOptions,
-    packs: HashMap<Arc<PackFileMeta>, Pack>,
+    packs: HashMap<PackFileMeta, Pack>,
     updates: HashMap<Arc<Vec<u8>>, Option<Arc<Vec<u8>>>>,
   ) -> UpdatePacksResult;
   async fn write_pack(&self, pack: &Pack) -> Result<()>;

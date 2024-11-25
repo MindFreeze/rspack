@@ -25,13 +25,13 @@ interface Node<T> {
 	setupResult?: T;
 	result?: Stats;
 	state:
-		| "pending"
-		| "blocked"
-		| "queued"
-		| "starting"
-		| "running"
-		| "running-outdated"
-		| "done";
+	| "pending"
+	| "blocked"
+	| "queued"
+	| "starting"
+	| "running"
+	| "running-outdated"
+	| "done";
 }
 
 export interface MultiCompilerOptions {
@@ -519,7 +519,7 @@ export class MultiCompiler {
 
 		if (this.validateDependencies(callback)) {
 			this.#runGraph(
-				() => {},
+				() => { },
 				(compiler, _, callback) => compiler.run(callback),
 				(err, stats) => {
 					this.running = false;

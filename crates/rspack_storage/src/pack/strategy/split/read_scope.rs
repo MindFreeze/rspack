@@ -258,7 +258,7 @@ mod tests {
   async fn test_read_meta(scope: &mut PackScope, strategy: &SplitPackStrategy) -> Result<()> {
     strategy.ensure_meta(scope).await?;
     let meta = scope.meta.expect_value();
-    assert_eq!(meta.path, ScopeMeta::get_path(scope.path.as_ref()));
+    assert_eq!(meta.path, ScopeMeta::get_path(&scope.path));
     assert_eq!(meta.buckets, scope.options.buckets);
     assert_eq!(meta.max_pack_size, scope.options.max_pack_size);
     assert_eq!(meta.packs.len(), scope.options.buckets);

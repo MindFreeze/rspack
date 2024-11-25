@@ -66,7 +66,7 @@ impl ScopePacksState {
 
 #[derive(Debug, Clone)]
 pub struct PackScope {
-  pub path: Arc<PathBuf>,
+  pub path: PathBuf,
   pub options: Arc<PackOptions>,
   pub meta: ScopeMetaState,
   pub packs: ScopePacksState,
@@ -76,7 +76,7 @@ pub struct PackScope {
 impl PackScope {
   pub fn new(path: PathBuf, options: Arc<PackOptions>) -> Self {
     Self {
-      path: Arc::new(path),
+      path,
       options,
       meta: ScopeMetaState::Pending,
       packs: ScopePacksState::Pending,
@@ -89,7 +89,7 @@ impl PackScope {
     let packs = vec![vec![]; options.buckets];
 
     Self {
-      path: Arc::new(path),
+      path,
       options,
       meta: ScopeMetaState::Value(meta),
       packs: ScopePacksState::Value(packs),
@@ -132,5 +132,11 @@ impl PackScope {
       })
       .flatten()
       .collect_vec()
+  }
+
+  pub fn clear(&mut self) {
+    self.meta = ScopeMetaState::Value(ScopeMeta::new(&self.path, &self.options));
+    self.packs = ScopePacksState::Value(vec![vec![]; self.options.buckets]);
+    self.removed = HashSet::default();
   }
 }

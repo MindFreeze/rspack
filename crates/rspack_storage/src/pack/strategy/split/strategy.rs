@@ -2,7 +2,7 @@ use std::{hash::Hasher, path::PathBuf, sync::Arc};
 
 use futures::{future::join_all, TryFutureExt};
 use rspack_error::{error, Result};
-use rustc_hash::FxHasher;
+use rustc_hash::{FxHashSet as HashSet, FxHasher};
 
 use super::util::get_name;
 use crate::pack::{PackContents, PackFs, PackKeys, ScopeStrategy};
@@ -23,7 +23,7 @@ impl SplitPackStrategy {
     }
   }
 
-  pub async fn move_temp_files(&self, files: Vec<PathBuf>) -> Result<()> {
+  pub async fn move_temp_files(&self, files: HashSet<PathBuf>) -> Result<()> {
     let mut candidates = vec![];
     for to in files {
       let from = self.get_temp_path(&to)?;
@@ -32,7 +32,8 @@ impl SplitPackStrategy {
 
     let tasks = candidates.into_iter().map(|(from, to)| {
       let fs = self.fs.clone();
-      tokio::spawn(async move { fs.move_file(&from, &to).await }).map_err(|e| error!("{}", e))
+      tokio::spawn(async move { fs.move_file(&from, &to).await })
+        .map_err(|e| error!("move temp files failed: {}", e))
     });
 
     join_all(tasks)
@@ -43,10 +44,11 @@ impl SplitPackStrategy {
     Ok(())
   }
 
-  pub async fn remove_files(&self, files: Vec<PathBuf>) -> Result<()> {
+  pub async fn remove_files(&self, files: HashSet<PathBuf>) -> Result<()> {
     let tasks = files.into_iter().map(|path| {
       let fs = self.fs.to_owned();
-      tokio::spawn(async move { fs.remove_file(&path).await }).map_err(|e| error!("{}", e))
+      tokio::spawn(async move { fs.remove_file(&path).await })
+        .map_err(|e| error!("remove files failed: {}", e))
     });
 
     join_all(tasks)
@@ -60,7 +62,7 @@ impl SplitPackStrategy {
   pub fn get_temp_path(&self, path: &PathBuf) -> Result<PathBuf> {
     let relative_path = path
       .strip_prefix(&*self.root)
-      .map_err(|e| error!("failed to get relative path: {}", e))?;
+      .map_err(|e| error!("get relative path failed: {}", e))?;
     Ok(self.temp_root.join(relative_path))
   }
 

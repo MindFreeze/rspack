@@ -26,8 +26,8 @@ impl ScopeWriteStrategy for SplitPackStrategy {
 
   async fn after_save(
     &self,
-    writed_files: Vec<PathBuf>,
-    removed_files: Vec<PathBuf>,
+    writed_files: HashSet<PathBuf>,
+    removed_files: HashSet<PathBuf>,
   ) -> Result<()> {
     self.move_temp_files(writed_files).await?;
     self.remove_files(removed_files).await?;
@@ -49,7 +49,7 @@ impl ScopeWriteStrategy for SplitPackStrategy {
     let bucket_updates = updates
       .into_par_iter()
       .map(|(key, value)| {
-        let bucket_id = choose_bucket(&key, scope.options.buckets);
+        let bucket_id = choose_bucket(&key, &scope.options.buckets);
         (bucket_id, key, value)
       })
       .collect::<Vec<_>>()

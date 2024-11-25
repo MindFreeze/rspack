@@ -8,7 +8,7 @@ use crate::pack::{Pack, PackContents, PackFileMeta, PackKeys, PackScope};
 
 pub fn get_indexed_packs(
   scope: &PackScope,
-) -> Result<(Vec<(usize, usize)>, Vec<(PackFileMeta, &Pack)>)> {
+) -> Result<(Vec<(usize, usize)>, Vec<(&PackFileMeta, &Pack)>)> {
   let meta = scope.meta.expect_value();
   let packs = scope.packs.expect_value();
 
@@ -26,7 +26,7 @@ pub fn get_indexed_packs(
             (
               (bucket_id, pack_pos),
               (
-                pack_meta.clone(),
+                pack_meta,
                 bucket_packs.get(pack_pos).expect("should have bucket pack"),
               ),
             )
@@ -48,7 +48,7 @@ pub fn get_name(keys: &PackKeys, _: &PackContents) -> String {
   format!("{:016x}", hasher.finish())
 }
 
-pub fn choose_bucket(key: &Vec<u8>, total: usize) -> usize {
+pub fn choose_bucket(key: &Vec<u8>, total: &usize) -> usize {
   let num = key.iter().fold(0_usize, |acc, i| acc + *i as usize);
   num % total
 }

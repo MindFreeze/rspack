@@ -39,18 +39,6 @@ pub trait PackWriteStrategy {
   async fn write_pack(&self, pack: &Pack) -> Result<()>;
 }
 
-// #[async_trait]
-// pub trait ScopeStrategy {
-// fn get_path(&self, sub: &str) -> PathBuf;
-//   // fn get_temp_path(&self, path: &PathBuf) -> Result<PathBuf>;
-
-// async fn before_save(&self) -> Result<()>;
-// async fn after_save(&self, writed_files: Vec<PathBuf>, removed_files: Vec<PathBuf>)
-//     -> Result<()>;
-//   async fn write_scope_meta(&self, meta: &ScopeMeta) -> Result<()>;
-//   async fn read_scope_meta(&self, path: &PathBuf) -> Result<Option<ScopeMeta>>;
-// }
-
 #[async_trait]
 pub trait ScopeReadStrategy {
   fn get_path(&self, sub: &str) -> PathBuf;
@@ -88,8 +76,11 @@ impl WriteScopeResult {
 #[async_trait]
 pub trait ScopeWriteStrategy {
   async fn before_save(&self) -> Result<()>;
-  async fn after_save(&self, writed_files: Vec<PathBuf>, removed_files: Vec<PathBuf>)
-    -> Result<()>;
+  async fn after_save(
+    &self,
+    writed_files: HashSet<PathBuf>,
+    removed_files: HashSet<PathBuf>,
+  ) -> Result<()>;
   async fn update_scope(
     &self,
     scope: &mut PackScope,

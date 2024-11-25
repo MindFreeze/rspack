@@ -8,6 +8,7 @@ pub mod test_pack_utils {
 
   use itertools::Itertools;
   use rspack_error::Result;
+  use rustc_hash::FxHashMap as HashMap;
 
   use crate::{pack::PackScope, PackFs, PackOptions};
 
@@ -72,6 +73,28 @@ pub mod test_pack_utils {
     writer.flush().await?;
 
     Ok(())
+  }
+
+  pub fn mock_updates(
+    start: usize,
+    end: usize,
+    remove: bool,
+  ) -> HashMap<Arc<Vec<u8>>, Option<Arc<Vec<u8>>>> {
+    let mut updates = HashMap::default();
+    for i in start..end {
+      let key = format!("{:0>6}_key", i);
+      let val = format!("{:0>6}_val", i);
+      updates.insert(
+        Arc::new(key.as_bytes().to_vec()),
+        if remove {
+          None
+        } else {
+          Some(Arc::new(val.as_bytes().to_vec()))
+        },
+      );
+    }
+
+    updates
   }
 
   pub fn count_scope_packs(scope: &PackScope) -> usize {

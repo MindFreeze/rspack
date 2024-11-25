@@ -60,13 +60,13 @@ impl ScopeManager {
           Ok(scope.get_contents())
         }
         ValidateResult::Invalid(reason) => {
-          scopes.clear();
-          Err(error!("cache is not validate: {}", reason))
+          scope.clear();
+          Err(error!("cache scope `{}` is invalid: {}", name, reason))
         }
       },
       Err(e) => {
-        scopes.clear();
-        Err(error!("cache is not validate: {}", e))
+        scope.clear();
+        Err(error!("read cache scope `{}` failed: {}", name, e))
       }
     }
   }
@@ -120,18 +120,19 @@ async fn save_scopes(
       .map(|(_, scope)| async move { strategy.write_scope(scope).await })
       .collect_vec(),
   );
-  let (writed_files, removed_files) = save_tasks
+  let write_res = save_tasks
     .await
     .into_iter()
     .collect::<Result<Vec<WriteScopeResult>>>()?
     .into_iter()
-    .fold((vec![], vec![]), |mut acc, s| {
-      acc.0.extend(s.writed_files);
-      acc.1.extend(s.removed_files);
+    .fold(WriteScopeResult::default(), |mut acc, s| {
+      acc.extend(s);
       acc
     });
 
-  strategy.after_save(writed_files, removed_files).await?;
+  strategy
+    .after_save(write_res.writed_files, write_res.removed_files)
+    .await?;
 
   Ok(scopes.into_iter().collect())
 }

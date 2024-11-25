@@ -262,8 +262,8 @@ mod tests {
 
   use crate::{
     pack::{
-      Pack, PackContentsState, PackFileMeta, PackKeysState, PackWriteStrategy, SplitPackStrategy,
-      UpdatePacksResult,
+      strategy::split::test::test_pack_utils::mock_updates, Pack, PackContentsState, PackFileMeta,
+      PackKeysState, PackWriteStrategy, SplitPackStrategy, UpdatePacksResult,
     },
     PackFs, PackMemoryFs, PackOptions,
   };
@@ -295,28 +295,6 @@ mod tests {
     assert_eq!(reader.bytes(5).await?, "val_1".as_bytes());
     assert_eq!(reader.bytes(5).await?, "val_2".as_bytes());
     Ok(())
-  }
-
-  fn mock_updates(
-    item_count: usize,
-    pre: usize,
-    remove: bool,
-  ) -> HashMap<Arc<Vec<u8>>, Option<Arc<Vec<u8>>>> {
-    let mut updates = HashMap::default();
-    for i in pre..pre + item_count {
-      let key = format!("{:0>6}_key", i);
-      let val = format!("{:0>6}_val", i);
-      updates.insert(
-        Arc::new(key.as_bytes().to_vec()),
-        if remove {
-          None
-        } else {
-          Some(Arc::new(val.as_bytes().to_vec()))
-        },
-      );
-    }
-
-    updates
   }
 
   fn update_packs(update_res: UpdatePacksResult) -> HashMap<PackFileMeta, Pack> {
@@ -354,7 +332,7 @@ mod tests {
     // half pack
     let mut packs = HashMap::default();
     let res = strategy
-      .update_packs(dir.clone(), &options, packs, mock_updates(50, 0, false))
+      .update_packs(dir.clone(), &options, packs, mock_updates(0, 50, false))
       .await;
     assert_eq!(res.new_packs.len(), 1);
     assert_eq!(res.remain_packs.len(), 0);
@@ -364,7 +342,7 @@ mod tests {
 
     // full pack
     let res = strategy
-      .update_packs(dir.clone(), &options, packs, mock_updates(50, 50, false))
+      .update_packs(dir.clone(), &options, packs, mock_updates(50, 100, false))
       .await;
     assert_eq!(res.new_packs.len(), 1);
     assert_eq!(res.remain_packs.len(), 0);
@@ -375,7 +353,7 @@ mod tests {
 
     // almost full pack
     let res = strategy
-      .update_packs(dir.clone(), &options, packs, mock_updates(90, 100, false))
+      .update_packs(dir.clone(), &options, packs, mock_updates(100, 190, false))
       .await;
     assert_eq!(res.new_packs.len(), 1);
     assert_eq!(res.remain_packs.len(), 1);
@@ -385,7 +363,7 @@ mod tests {
     packs = update_packs(res);
 
     let res = strategy
-      .update_packs(dir.clone(), &options, packs, mock_updates(10, 190, false))
+      .update_packs(dir.clone(), &options, packs, mock_updates(190, 200, false))
       .await;
     assert_eq!(res.new_packs.len(), 1);
     assert_eq!(res.remain_packs.len(), 2);
@@ -416,7 +394,7 @@ mod tests {
 
     // remove items pack
     let res = strategy
-      .update_packs(dir.clone(), &options, packs, mock_updates(30, 100, true))
+      .update_packs(dir.clone(), &options, packs, mock_updates(100, 130, true))
       .await;
     assert_eq!(res.new_packs.len(), 1);
     assert_eq!(res.remain_packs.len(), 3);

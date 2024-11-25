@@ -51,7 +51,7 @@ impl ScopeReadStrategy for SplitPackStrategy {
   async fn ensure_keys(&self, scope: &mut PackScope) -> Result<()> {
     self.ensure_packs(scope).await?;
 
-    let packs_results = read_keys(&scope, self).await?;
+    let packs_results = read_keys(scope, self).await?;
     let packs = scope.packs.expect_value_mut();
     for pack_res in packs_results {
       if let Some(pack) = packs
@@ -67,7 +67,7 @@ impl ScopeReadStrategy for SplitPackStrategy {
   async fn ensure_contents(&self, scope: &mut PackScope) -> Result<()> {
     self.ensure_keys(scope).await?;
 
-    let packs_results = read_contents(&scope, self).await?;
+    let packs_results = read_contents(scope, self).await?;
     let packs = scope.packs.expect_value_mut();
     for pack_res in packs_results {
       if let Some(pack) = packs

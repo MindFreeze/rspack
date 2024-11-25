@@ -41,7 +41,7 @@ impl PackReadStrategy for SplitPackStrategy {
       .await?
       .split(" ")
       .map(|item| item.parse::<usize>().expect("should have meta info"))
-      .fold(0_usize, |acc, key| acc + key);
+      .sum::<usize>();
 
     let content_meta_list: Vec<usize> = reader
       .line()

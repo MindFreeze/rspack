@@ -34,7 +34,7 @@ impl PackFs for PackMemoryFs {
       .0
       .remove_dir_all(&path.to_owned().assert_utf8())
       .await
-      .map_err(|e| PackFsError::from_fs_error(&path, PackFsErrorOpt::Remove, e))?;
+      .map_err(|e| PackFsError::from_fs_error(path, PackFsErrorOpt::Remove, e))?;
     Ok(())
   }
 
@@ -43,7 +43,7 @@ impl PackFs for PackMemoryFs {
       .0
       .create_dir_all(&path.to_owned().assert_utf8())
       .await
-      .map_err(|e| PackFsError::from_fs_error(&path, PackFsErrorOpt::Dir, e))?;
+      .map_err(|e| PackFsError::from_fs_error(path, PackFsErrorOpt::Dir, e))?;
     Ok(())
   }
 
@@ -65,7 +65,7 @@ impl PackFs for PackMemoryFs {
     let meta_data = self
       .0
       .metadata(&path.to_owned().assert_utf8())
-      .map_err(|e| PackFsError::from_fs_error(&path, PackFsErrorOpt::Stat, e))?;
+      .map_err(|e| PackFsError::from_fs_error(path, PackFsErrorOpt::Stat, e))?;
     Ok(FileMeta {
       size: meta_data.size,
       mtime: meta_data.mtime_ms,
@@ -79,7 +79,7 @@ impl PackFs for PackMemoryFs {
       .0
       .remove_file(&path.to_owned().assert_utf8())
       .await
-      .map_err(|e| PackFsError::from_fs_error(&path, PackFsErrorOpt::Remove, e))?;
+      .map_err(|e| PackFsError::from_fs_error(path, PackFsErrorOpt::Remove, e))?;
     Ok(())
   }
 

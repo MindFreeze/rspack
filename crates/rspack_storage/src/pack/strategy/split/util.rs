@@ -17,7 +17,7 @@ pub fn get_indexed_packs(
       .packs
       .iter()
       .enumerate()
-      .map(|(bucket_id, pack_meta_list)| {
+      .flat_map(|(bucket_id, pack_meta_list)| {
         let bucket_packs = packs.get(bucket_id).expect("should have bucket packs");
         pack_meta_list
           .iter()
@@ -33,7 +33,6 @@ pub fn get_indexed_packs(
           })
           .collect_vec()
       })
-      .flatten()
       .unzip(),
   )
 }
@@ -48,7 +47,7 @@ pub fn get_name(keys: &PackKeys, _: &PackContents) -> String {
   format!("{:016x}", hasher.finish())
 }
 
-pub fn choose_bucket(key: &Vec<u8>, total: &usize) -> usize {
+pub fn choose_bucket(key: &[u8], total: &usize) -> usize {
   let num = key.iter().fold(0_usize, |acc, i| acc + *i as usize);
   num % total
 }

@@ -10,16 +10,16 @@ use crate::pack::{PackContents, PackFs, PackKeys, ScopeStrategy};
 #[derive(Debug, Clone)]
 pub struct SplitPackStrategy {
   pub fs: Arc<dyn PackFs>,
-  pub root: Arc<PathBuf>,
-  pub temp_root: Arc<PathBuf>,
+  pub root: PathBuf,
+  pub temp_root: PathBuf,
 }
 
 impl SplitPackStrategy {
   pub fn new(root: PathBuf, temp_root: PathBuf, fs: Arc<dyn PackFs>) -> Self {
     Self {
       fs,
-      root: Arc::new(root),
-      temp_root: Arc::new(temp_root),
+      root,
+      temp_root,
     }
   }
 

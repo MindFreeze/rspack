@@ -48,21 +48,21 @@ impl PackWriteStrategy for SplitPackStrategy {
     // pour out items from non-full packs
     for (index, (pack_meta, _)) in indexed_packs.iter() {
       if (pack_meta.size as f64) < (options.max_pack_size as f64) * 0.8_f64 {
-        removed_packs.insert(index.clone());
+        removed_packs.insert(*index);
       }
     }
 
     // get dirty packs and items for insert/remove
     for (index, (key, val)) in indexed_updates.iter() {
       if val.is_some() {
-        insert_items.insert(index.clone());
+        insert_items.insert(*index);
         if let Some(pack_index) = item_to_pack.get(key) {
-          removed_packs.insert(pack_index.clone());
+          removed_packs.insert(*pack_index);
         }
       } else {
-        removed_items.insert(index.clone());
+        removed_items.insert(*index);
         if let Some(pack_index) = item_to_pack.get(key) {
-          removed_packs.insert(pack_index.clone());
+          removed_packs.insert(*pack_index);
         }
       }
     }
@@ -115,11 +115,7 @@ impl PackWriteStrategy for SplitPackStrategy {
       let _ = items.remove(&key);
     }
 
-    let remain_packs = indexed_packs
-      .into_iter()
-      .map(|(_, pack)| pack)
-      .collect_vec();
-
+    let remain_packs = indexed_packs.into_values().collect_vec();
     let new_packs: Vec<(PackFileMeta, Pack)> = create(&dir, options, items).await;
 
     UpdatePacksResult {
@@ -208,7 +204,7 @@ async fn create(
   }
 
   loop {
-    if items.len() == 0 {
+    if items.is_empty() {
       break;
     }
     let last_item = items.last().expect("should have first item");
@@ -250,7 +246,7 @@ async fn create(
       new_packs.push(create_pack(dir, batch_keys, batch_contents));
     }
 
-    if items.len() == 0 {
+    if items.is_empty() {
       break;
     }
   }

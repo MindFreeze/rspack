@@ -13,6 +13,6 @@ impl PackOptions {
       .duration_since(UNIX_EPOCH)
       .expect("get current time failed")
       .as_millis() as u64;
-    return current_time - last_modified > self.expires;
+    current_time - last_modified > self.expires
   }
 }

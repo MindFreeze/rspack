@@ -156,7 +156,7 @@ impl ScopeWriteStrategy for SplitPackStrategy {
       .collect_vec();
 
     let write_results =
-      batch_write_packs(candidates.iter().map(|i| i.0.clone()).collect_vec(), &self).await?;
+      batch_write_packs(candidates.iter().map(|i| i.0.clone()).collect_vec(), self).await?;
 
     for ((_, meta), (hash, path, size)) in candidates.iter_mut().zip(write_results.into_iter()) {
       let _ = std::mem::replace(

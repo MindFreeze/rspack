@@ -21,7 +21,7 @@ impl PackFs for PackNativeFs {
   async fn remove_dir(&self, path: &PathBuf) -> Result<()> {
     if path.exists() {
       remove_dir_all(path)
-        .map_err(|e| PackFsError::from_io_error(&path, PackFsErrorOpt::Remove, e).into())
+        .map_err(|e| PackFsError::from_io_error(path, PackFsErrorOpt::Remove, e).into())
     } else {
       Ok(())
     }
@@ -29,15 +29,15 @@ impl PackFs for PackNativeFs {
 
   async fn ensure_dir(&self, path: &PathBuf) -> Result<()> {
     std::fs::create_dir_all(path)
-      .map_err(|e| PackFsError::from_io_error(&path, PackFsErrorOpt::Dir, e).into())
+      .map_err(|e| PackFsError::from_io_error(path, PackFsErrorOpt::Dir, e).into())
   }
 
   async fn write_file(&self, path: &PathBuf) -> Result<Box<dyn PackFileWriter>> {
     self
       .ensure_dir(&PathBuf::from(path.parent().expect("should have parent")))
       .await?;
-    let file = File::create(path)
-      .map_err(|e| PackFsError::from_io_error(&path, PackFsErrorOpt::Write, e))?;
+    let file =
+      File::create(path).map_err(|e| PackFsError::from_io_error(path, PackFsErrorOpt::Write, e))?;
     Ok(Box::new(NativeFileWriter::new(
       path.clone(),
       BufWriter::new(file),
@@ -46,7 +46,7 @@ impl PackFs for PackNativeFs {
 
   async fn read_file(&self, path: &PathBuf) -> Result<Box<dyn PackFileReader>> {
     let file =
-      File::open(&path).map_err(|e| PackFsError::from_io_error(&path, PackFsErrorOpt::Read, e))?;
+      File::open(path).map_err(|e| PackFsError::from_io_error(path, PackFsErrorOpt::Read, e))?;
     Ok(Box::new(NativeFileReader::new(
       path.clone(),
       BufReader::new(file),
@@ -55,10 +55,10 @@ impl PackFs for PackNativeFs {
 
   async fn metadata(&self, path: &PathBuf) -> Result<FileMeta> {
     let file =
-      File::open(&path).map_err(|e| PackFsError::from_io_error(&path, PackFsErrorOpt::Read, e))?;
+      File::open(path).map_err(|e| PackFsError::from_io_error(path, PackFsErrorOpt::Read, e))?;
     let meta_data = file
       .metadata()
-      .map_err(|e| PackFsError::from_io_error(&path, PackFsErrorOpt::Stat, e))?;
+      .map_err(|e| PackFsError::from_io_error(path, PackFsErrorOpt::Stat, e))?;
     Ok(FileMeta {
       is_file: meta_data.is_file(),
       is_dir: meta_data.is_dir(),
@@ -69,8 +69,8 @@ impl PackFs for PackNativeFs {
 
   async fn remove_file(&self, path: &PathBuf) -> Result<()> {
     if path.exists() {
-      std::fs::remove_file(&path)
-        .map_err(|e| PackFsError::from_io_error(&path, PackFsErrorOpt::Remove, e).into())
+      std::fs::remove_file(path)
+        .map_err(|e| PackFsError::from_io_error(path, PackFsErrorOpt::Remove, e).into())
     } else {
       Ok(())
     }
@@ -81,8 +81,8 @@ impl PackFs for PackNativeFs {
       self
         .ensure_dir(&PathBuf::from(to.parent().expect("should have parent")))
         .await?;
-      std::fs::rename(&from, &to)
-        .map_err(|e| PackFsError::from_io_error(&from, PackFsErrorOpt::Move, e).into())
+      std::fs::rename(from, to)
+        .map_err(|e| PackFsError::from_io_error(from, PackFsErrorOpt::Move, e).into())
     } else {
       Ok(())
     }

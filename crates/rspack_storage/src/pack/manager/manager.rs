@@ -113,7 +113,7 @@ async fn save_scopes(
           scope,
           updates
             .into_iter()
-            .map(|(key, val)| (Arc::new(key), val.map(|val| Arc::new(val))))
+            .map(|(key, val)| (Arc::new(key), val.map(Arc::new)))
             .collect::<HashMap<Arc<Vec<u8>>, Option<Arc<Vec<u8>>>>>(),
         )
       }),

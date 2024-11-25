@@ -27,10 +27,7 @@ impl TaskQueue {
   }
 
   pub fn add_task(&self, task: impl Future<Output = ()> + Send + 'static) {
-    self
-      .0
-      .send(async move { task.await }.boxed())
-      .expect("should add task");
+    self.0.send(task.boxed()).expect("should add task");
   }
 }
 

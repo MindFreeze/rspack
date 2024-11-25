@@ -29,13 +29,13 @@ impl ScopeMeta {
     }
     Self {
       path: Self::get_path(dir),
-      buckets: options.buckets.clone(),
-      max_pack_size: options.max_pack_size.clone(),
+      buckets: options.buckets,
+      max_pack_size: options.max_pack_size,
       last_modified: SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("should get current time")
         .as_millis() as u64,
-      packs: packs,
+      packs,
     }
   }
 

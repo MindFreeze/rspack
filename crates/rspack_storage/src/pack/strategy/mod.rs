@@ -114,13 +114,13 @@ pub trait ScopeValidateStrategy {
 
 #[derive(Debug, Default)]
 pub struct WriteScopeResult {
-  pub writed_files: HashSet<Utf8PathBuf>,
+  pub wrote_files: HashSet<Utf8PathBuf>,
   pub removed_files: HashSet<Utf8PathBuf>,
 }
 
 impl WriteScopeResult {
   pub fn extend(&mut self, other: Self) {
-    self.writed_files.extend(other.writed_files);
+    self.wrote_files.extend(other.wrote_files);
     self.removed_files.extend(other.removed_files);
   }
 }
@@ -130,7 +130,7 @@ pub trait ScopeWriteStrategy {
   async fn before_save(&self) -> Result<()>;
   async fn after_save(
     &self,
-    writed_files: HashSet<Utf8PathBuf>,
+    wrote_files: HashSet<Utf8PathBuf>,
     removed_files: HashSet<Utf8PathBuf>,
   ) -> Result<()>;
   async fn update_scope(

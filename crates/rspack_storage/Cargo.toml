@@ -12,7 +12,6 @@ version = "0.1.0"
 async-trait = {workspace = true}
 futures = {workspace = true}
 itertools = {workspace = true}
-pollster = {workspace = true}
 rayon = {workspace = true}
 rspack_error = {version = "0.1.0", path = "../rspack_error"}
 rspack_fs = {version = "0.1.0", path = "../rspack_fs"}

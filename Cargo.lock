@@ -4705,7 +4705,6 @@ dependencies = [
  "async-trait",
  "futures",
  "itertools 0.13.0",
- "pollster",
  "rayon",
  "rspack_error",
  "rspack_fs",

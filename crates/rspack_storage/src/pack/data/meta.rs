@@ -9,7 +9,7 @@ pub struct PackFileMeta {
   pub hash: String,
   pub name: String,
   pub size: usize,
-  pub writed: bool,
+  pub wrote: bool,
 }
 
 #[derive(Debug, Default)]

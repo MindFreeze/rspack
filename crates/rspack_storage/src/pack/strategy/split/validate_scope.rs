@@ -259,7 +259,7 @@ mod tests {
       .await
       .expect("should write scope");
     strategy
-      .after_save(files.writed_files.clone(), files.removed_files)
+      .after_save(files.wrote_files.clone(), files.removed_files)
       .await
       .expect("should move files");
 
@@ -272,7 +272,7 @@ mod tests {
       &strategy,
       fs.clone(),
       pack_options.clone(),
-      files.writed_files,
+      files.wrote_files,
     )
     .await
     .map_err(|e| panic!("{}", e));

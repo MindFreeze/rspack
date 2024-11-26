@@ -128,7 +128,7 @@ async fn read_scope_meta(path: &Utf8Path, fs: Arc<dyn PackFs>) -> Result<Option<
               name: i[0].to_owned(),
               hash: i[1].to_owned(),
               size: i[2].parse::<usize>().expect("should parse pack size"),
-              writed: true,
+              wrote: true,
             })
           }
         })
@@ -166,14 +166,14 @@ async fn read_keys(scope: &PackScope, strategy: &SplitPackStrategy) -> Result<Ve
       tokio::spawn(async move { strategy.read_pack_keys(&path).await }).map_err(|e| error!("{}", e))
     })
     .collect_vec();
-  let readed = join_all(tasks).await.into_iter().process_results(|iter| {
+  let task_result = join_all(tasks).await.into_iter().process_results(|iter| {
     iter
       .into_iter()
       .process_results(|iter| iter.map(|x| x.unwrap_or_default()).collect_vec())
   })??;
 
   Ok(
-    readed
+    task_result
       .into_iter()
       .zip(candidates_index_list.into_iter())
       .map(|(keys, (bucket_id, pack_pos))| ReadKeysResult {
@@ -206,14 +206,14 @@ async fn read_contents(
         .map_err(|e| error!("{}", e))
     })
     .collect_vec();
-  let readed = join_all(tasks).await.into_iter().process_results(|iter| {
+  let task_result = join_all(tasks).await.into_iter().process_results(|iter| {
     iter
       .into_iter()
       .process_results(|iter| iter.map(|x| x.unwrap_or_default()).collect_vec())
   })??;
 
   Ok(
-    readed
+    task_result
       .into_iter()
       .zip(candidates_index_list.into_iter())
       .map(|(contents, (bucket_id, pack_pos))| ReadContentsResult {
@@ -268,7 +268,7 @@ mod tests {
         .packs
         .iter()
         .flatten()
-        .map(|i| (i.name.as_str(), i.hash.as_str(), i.size, i.writed))
+        .map(|i| (i.name.as_str(), i.hash.as_str(), i.size, i.wrote))
         .collect_vec(),
       vec![
         ("pack_name_0_0", "pack_hash_0_0", 100, true),

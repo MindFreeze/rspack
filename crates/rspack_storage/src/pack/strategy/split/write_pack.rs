@@ -198,7 +198,7 @@ async fn create(
         name: file_name,
         hash: Default::default(),
         size: new_pack.size(),
-        writed: false,
+        wrote: false,
       },
       new_pack,
     )

@@ -24,10 +24,10 @@ impl ScopeWriteStrategy for SplitPackStrategy {
 
   async fn after_save(
     &self,
-    writed_files: HashSet<Utf8PathBuf>,
+    wrote_files: HashSet<Utf8PathBuf>,
     removed_files: HashSet<Utf8PathBuf>,
   ) -> Result<()> {
-    self.move_temp_files(writed_files).await?;
+    self.move_temp_files(wrote_files).await?;
     self.remove_files(removed_files).await?;
     self.fs.remove_dir(&self.temp_root).await?;
     Ok(())
@@ -144,13 +144,13 @@ impl ScopeWriteStrategy for SplitPackStrategy {
     let packs = scope.packs.expect_value();
     let meta = scope.meta.expect_value_mut();
 
-    let mut writed_files = HashSet::default();
+    let mut wrote_files = HashSet::default();
 
     let mut candidates = packs
       .iter()
       .flatten()
       .zip(meta.packs.iter_mut().flatten())
-      .filter(|(_, meta)| !meta.writed)
+      .filter(|(_, meta)| !meta.wrote)
       .collect_vec();
 
     let write_results =
@@ -163,14 +163,14 @@ impl ScopeWriteStrategy for SplitPackStrategy {
           hash,
           size,
           name: meta.name.clone(),
-          writed: true,
+          wrote: true,
         },
       );
-      writed_files.insert(path);
+      wrote_files.insert(path);
     }
 
     Ok(WriteScopeResult {
-      writed_files,
+      wrote_files,
       removed_files,
     })
   }
@@ -215,7 +215,7 @@ impl ScopeWriteStrategy for SplitPackStrategy {
     writer.flush().await?;
 
     Ok(WriteScopeResult {
-      writed_files: HashSet::from_iter(vec![meta.path.clone()]),
+      wrote_files: HashSet::from_iter(vec![meta.path.clone()]),
       removed_files: Default::default(),
     })
   }
@@ -253,13 +253,13 @@ async fn batch_write_packs(
     tokio::spawn(async move { save_pack(pack, &strategy).await }).map_err(|e| error!("{}", e))
   });
 
-  let writed = join_all(tasks)
+  let wrote = join_all(tasks)
     .await
     .into_iter()
     .collect::<Result<Vec<Result<(String, Utf8PathBuf, usize)>>>>()?;
 
   let mut res = vec![];
-  for item in writed {
+  for item in wrote {
     res.push(item?);
   }
   Ok(res)
@@ -372,28 +372,28 @@ mod tests {
     assert_eq!(count_scope_packs(&scope), 5);
     let res = strategy.write_scope(scope).await?;
     // 5 packs + 1 meta
-    assert_eq!(res.writed_files.len(), 6);
+    assert_eq!(res.wrote_files.len(), 6);
     assert_eq!(res.removed_files.len(), 0);
 
     test_long_value(scope, strategy, 10, 15).await?;
     assert_eq!(count_scope_packs(&scope), 10);
     let res = strategy.write_scope(scope).await?;
     // 5 packs + 1 meta
-    assert_eq!(res.writed_files.len(), 6);
+    assert_eq!(res.wrote_files.len(), 6);
     assert_eq!(res.removed_files.len(), 0);
 
     test_update_value(scope, strategy).await?;
     assert_eq!(count_scope_packs(&scope), 10);
     let res = strategy.write_scope(scope).await?;
     // 1 pack + 1 meta
-    assert_eq!(res.writed_files.len(), 2);
+    assert_eq!(res.wrote_files.len(), 2);
     assert_eq!(res.removed_files.len(), 1);
 
     test_remove_value(scope, strategy).await?;
     assert_eq!(count_scope_packs(&scope), 10);
     let res = strategy.write_scope(scope).await?;
     // 1 pack + 1 meta
-    assert_eq!(res.writed_files.len(), 2);
+    assert_eq!(res.wrote_files.len(), 2);
     assert_eq!(res.removed_files.len(), 1);
 
     Ok(())
@@ -405,28 +405,28 @@ mod tests {
 
     let res = strategy.write_scope(scope).await?;
     // 50 packs + 1 meta
-    assert_eq!(res.writed_files.len(), 51);
+    assert_eq!(res.wrote_files.len(), 51);
     assert_eq!(res.removed_files.len(), 0);
 
     test_long_value(scope, strategy, 100, 150).await?;
     assert_eq!(count_bucket_packs(&scope), vec![10; 10]);
     let res = strategy.write_scope(scope).await?;
     // 50 packs + 1 meta
-    assert_eq!(res.writed_files.len(), 51);
+    assert_eq!(res.wrote_files.len(), 51);
     assert_eq!(res.removed_files.len(), 0);
 
     test_update_value(scope, strategy).await?;
     assert_eq!(count_bucket_packs(&scope), vec![10; 10]);
     let res = strategy.write_scope(scope).await?;
     // 1 packs + 1 meta
-    assert_eq!(res.writed_files.len(), 2);
+    assert_eq!(res.wrote_files.len(), 2);
     assert_eq!(res.removed_files.len(), 1);
 
     test_remove_value(scope, strategy).await?;
     assert_eq!(count_bucket_packs(&scope), vec![10; 10]);
     let res = strategy.write_scope(scope).await?;
     // 1 packs + 1 meta
-    assert_eq!(res.writed_files.len(), 2);
+    assert_eq!(res.wrote_files.len(), 2);
     assert_eq!(res.removed_files.len(), 1);
 
     Ok(())

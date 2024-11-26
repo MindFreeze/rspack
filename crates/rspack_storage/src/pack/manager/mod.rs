@@ -136,7 +136,7 @@ async fn save_scopes(
     });
 
   strategy
-    .after_save(write_res.writed_files, write_res.removed_files)
+    .after_save(write_res.wrote_files, write_res.removed_files)
     .await?;
 
   Ok(scopes.into_iter().collect())

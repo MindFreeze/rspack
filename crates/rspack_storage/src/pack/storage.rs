@@ -50,7 +50,7 @@ impl PackStorage {
 
 #[async_trait::async_trait]
 impl Storage for PackStorage {
-  async fn get_all(&self, name: &'static str) -> Result<Vec<(Arc<Vec<u8>>, Arc<Vec<u8>>)>> {
+  async fn get_all(&self, name: &'static str) -> Result<Vec<(Vec<u8>, Vec<u8>)>> {
     self.manager.get_all(name).await
   }
   fn set(&self, scope: &'static str, key: Vec<u8>, value: Vec<u8>) {

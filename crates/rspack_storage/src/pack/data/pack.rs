@@ -1,9 +1,7 @@
-use std::sync::Arc;
-
 use rspack_paths::Utf8PathBuf;
 
-pub type PackKeys = Vec<Arc<Vec<u8>>>;
-pub type PackContents = Vec<Arc<Vec<u8>>>;
+pub type PackKeys = Vec<Vec<u8>>;
+pub type PackContents = Vec<Vec<u8>>;
 
 #[derive(Debug, Default, Clone)]
 pub enum PackKeysState {

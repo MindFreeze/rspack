@@ -88,21 +88,19 @@ pub mod test_pack_utils {
     end: usize,
     length: usize,
     value: UpdateVal,
-  ) -> HashMap<Arc<Vec<u8>>, Option<Arc<Vec<u8>>>> {
+  ) -> HashMap<Vec<u8>, Option<Vec<u8>>> {
     let mut updates = HashMap::default();
     for i in start..end {
       updates.insert(
-        Arc::new(
-          format!("{:0>length$}_key", i, length = length - 4)
-            .as_bytes()
-            .to_vec(),
-        ),
+        format!("{:0>length$}_key", i, length = length - 4)
+          .as_bytes()
+          .to_vec(),
         match &value {
-          UpdateVal::Value(str) => Some(Arc::new(
+          UpdateVal::Value(str) => Some(
             format!("{:0>length$}_{}", i, str, length = length - (str.len() + 1))
               .as_bytes()
               .to_vec(),
-          )),
+          ),
           UpdateVal::Removed => None,
         },
       );

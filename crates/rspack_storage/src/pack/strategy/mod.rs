@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use async_trait::async_trait;
 use rspack_error::Result;
 use rspack_paths::{Utf8Path, Utf8PathBuf};
@@ -35,7 +33,7 @@ pub trait PackWriteStrategy {
     dir: Utf8PathBuf,
     options: &PackOptions,
     packs: HashMap<PackFileMeta, Pack>,
-    updates: HashMap<Arc<Vec<u8>>, Option<Arc<Vec<u8>>>>,
+    updates: HashMap<Vec<u8>, Option<Vec<u8>>>,
   ) -> UpdatePacksResult;
   async fn write_pack(&self, pack: &Pack) -> Result<()>;
 }
@@ -138,7 +136,7 @@ pub trait ScopeWriteStrategy {
   async fn update_scope(
     &self,
     scope: &mut PackScope,
-    updates: HashMap<Arc<Vec<u8>>, Option<Arc<Vec<u8>>>>,
+    updates: HashMap<Vec<u8>, Option<Vec<u8>>>,
   ) -> Result<()>;
   async fn write_scope(&self, scope: &mut PackScope) -> Result<WriteScopeResult>;
   async fn write_packs(&self, scope: &mut PackScope) -> Result<WriteScopeResult>;

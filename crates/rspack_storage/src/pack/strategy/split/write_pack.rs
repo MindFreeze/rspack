@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use async_trait::async_trait;
 use itertools::Itertools;
 use rspack_error::{error, Result};
@@ -22,7 +20,7 @@ impl PackWriteStrategy for SplitPackStrategy {
     dir: Utf8PathBuf,
     options: &PackOptions,
     packs: HashMap<PackFileMeta, Pack>,
-    updates: HashMap<Arc<Vec<u8>>, Option<Arc<Vec<u8>>>>,
+    updates: HashMap<Vec<u8>, Option<Vec<u8>>>,
   ) -> UpdatePacksResult {
     let pack_dir = dir.to_path_buf();
     let mut indexed_packs = packs.into_iter().enumerate().collect::<HashMap<_, _>>();
@@ -183,7 +181,7 @@ impl PackWriteStrategy for SplitPackStrategy {
 async fn create(
   dir: &Utf8Path,
   options: &PackOptions,
-  items: HashMap<Arc<Vec<u8>>, Arc<Vec<u8>>>,
+  items: HashMap<Vec<u8>, Vec<u8>>,
 ) -> Vec<(PackFileMeta, Pack)> {
   let mut items = items.into_iter().collect_vec();
   items.sort_unstable_by(|a, b| a.1.len().cmp(&b.1.len()));
@@ -278,12 +276,12 @@ mod tests {
   async fn test_write_pack(strategy: &SplitPackStrategy) -> Result<()> {
     let mut pack = Pack::new(Utf8PathBuf::from("/cache/test_write_pack/pack"));
     pack.keys = PackKeysState::Value(vec![
-      Arc::new("key_1".as_bytes().to_vec()),
-      Arc::new("key_2".as_bytes().to_vec()),
+      "key_1".as_bytes().to_vec(),
+      "key_2".as_bytes().to_vec(),
     ]);
     pack.contents = PackContentsState::Value(vec![
-      Arc::new("val_1".as_bytes().to_vec()),
-      Arc::new("val_2".as_bytes().to_vec()),
+      "val_1".as_bytes().to_vec(),
+      "val_2".as_bytes().to_vec(),
     ]);
     strategy.write_pack(&pack).await?;
 
@@ -431,8 +429,8 @@ mod tests {
     // update items pack
     let mut updates = HashMap::default();
     updates.insert(
-      Arc::new(format!("{:0>6}_key", 131).as_bytes().to_vec()),
-      Some(Arc::new(format!("{:0>6}_valaaa", 131).as_bytes().to_vec())),
+      format!("{:0>6}_key", 131).as_bytes().to_vec(),
+      Some(format!("{:0>6}_valaaa", 131).as_bytes().to_vec()),
     );
     let res = strategy
       .update_packs(dir.clone(), &options, packs, updates)

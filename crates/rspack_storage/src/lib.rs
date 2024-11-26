@@ -8,7 +8,7 @@ pub use pack::{PackFs, PackMemoryFs, PackNativeFs, PackOptions, PackStorage, Pac
 use rspack_error::Result;
 use tokio::sync::oneshot::Receiver;
 
-pub type StorageContent = Vec<(Arc<Vec<u8>>, Arc<Vec<u8>>)>;
+pub type StorageContent = Vec<(Vec<u8>, Vec<u8>)>;
 
 #[async_trait::async_trait]
 pub trait Storage: std::fmt::Debug + Sync + Send {

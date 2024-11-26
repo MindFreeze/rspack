@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use async_trait::async_trait;
 use futures::future::join_all;
 use futures::TryFutureExt;
@@ -37,7 +35,7 @@ impl ScopeWriteStrategy for SplitPackStrategy {
   async fn update_scope(
     &self,
     scope: &mut PackScope,
-    updates: HashMap<Arc<Vec<u8>>, Option<Arc<Vec<u8>>>>,
+    updates: HashMap<Vec<u8>, Option<Vec<u8>>>,
   ) -> Result<()> {
     if !scope.loaded() {
       return Err(error!("scope not loaded, run `get_all` first"));
@@ -55,7 +53,7 @@ impl ScopeWriteStrategy for SplitPackStrategy {
       .collect::<Vec<_>>()
       .into_iter()
       .fold(
-        HashMap::<usize, HashMap<Arc<Vec<u8>>, Option<Arc<Vec<u8>>>>>::default(),
+        HashMap::<usize, HashMap<Vec<u8>, Option<Vec<u8>>>>::default(),
         |mut res, (bucket_id, key, value)| {
           res.entry(bucket_id).or_default().insert(key, value);
           res

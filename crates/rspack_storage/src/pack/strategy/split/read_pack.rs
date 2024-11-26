@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use async_trait::async_trait;
 use rspack_error::Result;
 use rspack_paths::Utf8Path;
@@ -26,7 +24,7 @@ impl PackReadStrategy for SplitPackStrategy {
 
     let mut keys = vec![];
     for len in key_meta_list {
-      keys.push(Arc::new(reader.bytes(len).await?));
+      keys.push(reader.bytes(len).await?);
     }
     Ok(Some(keys))
   }
@@ -55,7 +53,7 @@ impl PackReadStrategy for SplitPackStrategy {
 
     let mut res = vec![];
     for len in content_meta_list {
-      res.push(Arc::new(reader.bytes(len).await?));
+      res.push(reader.bytes(len).await?);
     }
 
     Ok(Some(res))

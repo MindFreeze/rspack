@@ -64,6 +64,7 @@ impl ScopeManager {
         if res.is_valid() {
           self.strategy.ensure_contents(scope).await?;
           Ok(scope.get_contents())
+          // Ok(vec![])
         } else {
           scope.clear();
           Err(error!(res.to_string()))
@@ -112,15 +113,7 @@ async fn save_scopes(
       .map(|(name, scope)| (scope, updates.remove(name).unwrap_or_default()))
       .collect_vec()
       .into_iter()
-      .map(|(scope, updates)| {
-        strategy.update_scope(
-          scope,
-          updates
-            .into_iter()
-            .map(|(key, val)| (Arc::new(key), val.map(Arc::new)))
-            .collect::<HashMap<Arc<Vec<u8>>, Option<Arc<Vec<u8>>>>>(),
-        )
-      }),
+      .map(|(scope, updates)| strategy.update_scope(scope, updates)),
   );
 
   update_tasks.await.into_iter().collect::<Result<()>>()?;

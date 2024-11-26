@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use rspack_error::Result;
 
 mod native;
@@ -10,6 +8,7 @@ pub use memory::*;
 
 mod error;
 pub use error::*;
+use rspack_paths::Utf8Path;
 
 pub struct FileMeta {
   pub size: u64,
@@ -36,12 +35,12 @@ pub trait PackFileWriter: std::fmt::Debug + Sync + Send {
 
 #[async_trait::async_trait]
 pub trait PackFs: std::fmt::Debug + Sync + Send {
-  async fn exists(&self, path: &PathBuf) -> Result<bool>;
-  async fn remove_dir(&self, path: &PathBuf) -> Result<()>;
-  async fn ensure_dir(&self, path: &PathBuf) -> Result<()>;
-  async fn write_file(&self, path: &PathBuf) -> Result<Box<dyn PackFileWriter>>;
-  async fn read_file(&self, path: &PathBuf) -> Result<Box<dyn PackFileReader>>;
-  async fn metadata(&self, path: &PathBuf) -> Result<FileMeta>;
-  async fn remove_file(&self, path: &PathBuf) -> Result<()>;
-  async fn move_file(&self, from: &PathBuf, to: &PathBuf) -> Result<()>;
+  async fn exists(&self, path: &Utf8Path) -> Result<bool>;
+  async fn remove_dir(&self, path: &Utf8Path) -> Result<()>;
+  async fn ensure_dir(&self, path: &Utf8Path) -> Result<()>;
+  async fn write_file(&self, path: &Utf8Path) -> Result<Box<dyn PackFileWriter>>;
+  async fn read_file(&self, path: &Utf8Path) -> Result<Box<dyn PackFileReader>>;
+  async fn metadata(&self, path: &Utf8Path) -> Result<FileMeta>;
+  async fn remove_file(&self, path: &Utf8Path) -> Result<()>;
+  async fn move_file(&self, from: &Utf8Path, to: &Utf8Path) -> Result<()>;
 }

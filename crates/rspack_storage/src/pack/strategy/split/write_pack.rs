@@ -1,8 +1,9 @@
-use std::{path::PathBuf, sync::Arc};
+use std::sync::Arc;
 
 use async_trait::async_trait;
 use itertools::Itertools;
 use rspack_error::{error, Result};
+use rspack_paths::{Utf8Path, Utf8PathBuf};
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 
 use super::SplitPackStrategy;
@@ -18,11 +19,12 @@ use crate::{
 impl PackWriteStrategy for SplitPackStrategy {
   async fn update_packs(
     &self,
-    dir: PathBuf,
+    dir: Utf8PathBuf,
     options: &PackOptions,
     packs: HashMap<PackFileMeta, Pack>,
     updates: HashMap<Arc<Vec<u8>>, Option<Arc<Vec<u8>>>>,
   ) -> UpdatePacksResult {
+    let pack_dir = dir.to_path_buf();
     let mut indexed_packs = packs.into_iter().enumerate().collect::<HashMap<_, _>>();
     let mut indexed_updates = updates.into_iter().enumerate().collect::<HashMap<_, _>>();
 
@@ -34,7 +36,7 @@ impl PackWriteStrategy for SplitPackStrategy {
             return acc;
           };
           for key in keys {
-            acc.insert(key.clone(), pack_index.clone());
+            acc.insert(key.clone(), *pack_index);
           }
           acc
         });
@@ -116,7 +118,7 @@ impl PackWriteStrategy for SplitPackStrategy {
     }
 
     let remain_packs = indexed_packs.into_values().collect_vec();
-    let new_packs: Vec<(PackFileMeta, Pack)> = create(&dir, options, items).await;
+    let new_packs: Vec<(PackFileMeta, Pack)> = create(&pack_dir, options, items).await;
 
     UpdatePacksResult {
       new_packs,
@@ -132,9 +134,10 @@ impl PackWriteStrategy for SplitPackStrategy {
     if keys.len() != contents.len() {
       return Err(error!("pack keys and contents length not match"));
     }
+
     self
       .fs
-      .ensure_dir(&PathBuf::from(path.parent().expect("should have parent")))
+      .ensure_dir(path.parent().expect("should have parent"))
       .await?;
 
     let mut writer = self.fs.write_file(&path).await?;
@@ -178,7 +181,7 @@ impl PackWriteStrategy for SplitPackStrategy {
 }
 
 async fn create(
-  dir: &PathBuf,
+  dir: &Utf8Path,
   options: &PackOptions,
   items: HashMap<Arc<Vec<u8>>, Arc<Vec<u8>>>,
 ) -> Vec<(PackFileMeta, Pack)> {
@@ -187,9 +190,9 @@ async fn create(
 
   let mut new_packs = vec![];
 
-  fn create_pack(dir: &PathBuf, keys: PackKeys, contents: PackContents) -> (PackFileMeta, Pack) {
+  fn create_pack(dir: &Utf8Path, keys: PackKeys, contents: PackContents) -> (PackFileMeta, Pack) {
     let file_name = get_name(&keys, &contents);
-    let mut new_pack = Pack::new(dir.join(file_name.clone()));
+    let mut new_pack = Pack::new(dir.join(&file_name));
     new_pack.keys = PackKeysState::Value(keys);
     new_pack.contents = PackContentsState::Value(contents);
     (
@@ -226,7 +229,7 @@ async fn create(
     let mut batch_size = 0_usize;
 
     loop {
-      if items.len() == 0 {
+      if items.is_empty() {
         break;
       }
 
@@ -256,10 +259,11 @@ async fn create(
 
 #[cfg(test)]
 mod tests {
-  use std::{path::PathBuf, sync::Arc};
+  use std::sync::Arc;
 
   use itertools::Itertools;
   use rspack_error::Result;
+  use rspack_paths::Utf8PathBuf;
   use rustc_hash::FxHashMap as HashMap;
 
   use crate::{
@@ -272,7 +276,7 @@ mod tests {
   };
 
   async fn test_write_pack(strategy: &SplitPackStrategy) -> Result<()> {
-    let mut pack = Pack::new(PathBuf::from("/cache/test_write_pack/pack"));
+    let mut pack = Pack::new(Utf8PathBuf::from("/cache/test_write_pack/pack"));
     pack.keys = PackKeysState::Value(vec![
       Arc::new("key_1".as_bytes().to_vec()),
       Arc::new("key_2".as_bytes().to_vec()),
@@ -325,7 +329,7 @@ mod tests {
   }
 
   async fn test_update_packs(strategy: &SplitPackStrategy) -> Result<()> {
-    let dir = PathBuf::from("/cache/test_update_packs");
+    let dir = Utf8PathBuf::from("/cache/test_update_packs");
     let options = PackOptions {
       buckets: 1,
       max_pack_size: 2000,
@@ -444,12 +448,12 @@ mod tests {
   #[tokio::test]
   async fn should_write_pack() {
     let fs = Arc::new(PackMemoryFs::default());
-    fs.remove_dir(&PathBuf::from("/cache/test_write_pack"))
+    fs.remove_dir(&Utf8PathBuf::from("/cache/test_write_pack"))
       .await
       .expect("should clean dir");
     let strategy = SplitPackStrategy::new(
-      PathBuf::from("/cache/test_write_pack"),
-      PathBuf::from("/temp/test_write_pack"),
+      Utf8PathBuf::from("/cache/test_write_pack"),
+      Utf8PathBuf::from("/temp/test_write_pack"),
       fs.clone(),
     );
 
@@ -461,12 +465,12 @@ mod tests {
   #[tokio::test]
   async fn should_update_packs() {
     let fs = Arc::new(PackMemoryFs::default());
-    fs.remove_dir(&PathBuf::from("/cache/test_update_packs"))
+    fs.remove_dir(&Utf8PathBuf::from("/cache/test_update_packs"))
       .await
       .expect("should clean dir");
     let strategy = SplitPackStrategy::new(
-      PathBuf::from("/cache/test_update_packs"),
-      PathBuf::from("/temp/test_update_packs"),
+      Utf8PathBuf::from("/cache/test_update_packs"),
+      Utf8PathBuf::from("/temp/test_update_packs"),
       fs.clone(),
     );
 

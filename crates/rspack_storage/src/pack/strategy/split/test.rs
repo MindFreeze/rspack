@@ -1,13 +1,13 @@
 #[cfg(test)]
 pub mod test_pack_utils {
   use std::{
-    path::PathBuf,
     sync::Arc,
     time::{SystemTime, UNIX_EPOCH},
   };
 
   use itertools::Itertools;
   use rspack_error::Result;
+  use rspack_paths::Utf8Path;
   use rustc_hash::FxHashMap as HashMap;
 
   use crate::{
@@ -16,12 +16,12 @@ pub mod test_pack_utils {
   };
 
   pub async fn mock_meta_file(
-    path: &PathBuf,
+    path: &Utf8Path,
     fs: Arc<dyn PackFs>,
     options: &PackOptions,
     pack_count: usize,
   ) -> Result<()> {
-    fs.ensure_dir(&PathBuf::from(path.parent().expect("should have parent")))
+    fs.ensure_dir(path.parent().expect("should have parent"))
       .await?;
     let mut writer = fs.write_file(path).await?;
     let current = SystemTime::now()
@@ -48,12 +48,12 @@ pub mod test_pack_utils {
   }
 
   pub async fn mock_pack_file(
-    path: &PathBuf,
+    path: &Utf8Path,
     unique_id: &str,
     item_count: usize,
     fs: Arc<dyn PackFs>,
   ) -> Result<()> {
-    fs.ensure_dir(&PathBuf::from(path.parent().expect("should have parent")))
+    fs.ensure_dir(path.parent().expect("should have parent"))
       .await?;
     let mut writer = fs.write_file(&path).await?;
     let mut keys = vec![];
@@ -150,7 +150,7 @@ pub mod test_pack_utils {
     .expect("should remove dir");
   }
 
-  pub async fn flush_file_mtime(path: &PathBuf, fs: Arc<dyn PackFs>) -> Result<()> {
+  pub async fn flush_file_mtime(path: &Utf8Path, fs: Arc<dyn PackFs>) -> Result<()> {
     let content = fs.read_file(path).await?.remain().await?;
     fs.write_file(path).await?.write(&content).await?;
 

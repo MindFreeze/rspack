@@ -1,4 +1,6 @@
-use std::{path::PathBuf, sync::Arc};
+use std::sync::Arc;
+
+use rspack_paths::Utf8PathBuf;
 
 pub type PackKeys = Vec<Arc<Vec<u8>>>;
 pub type PackContents = Vec<Arc<Vec<u8>>>;
@@ -37,13 +39,13 @@ impl PackContentsState {
 
 #[derive(Debug, Clone)]
 pub struct Pack {
-  pub path: PathBuf,
+  pub path: Utf8PathBuf,
   pub keys: PackKeysState,
   pub contents: PackContentsState,
 }
 
 impl Pack {
-  pub fn new(path: PathBuf) -> Self {
+  pub fn new(path: Utf8PathBuf) -> Self {
     Self {
       path,
       keys: Default::default(),

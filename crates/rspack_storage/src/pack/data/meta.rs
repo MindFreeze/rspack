@@ -1,9 +1,8 @@
-use std::{
-  path::PathBuf,
-  time::{SystemTime, UNIX_EPOCH},
-};
+use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::PackOptions;
+use rspack_paths::{Utf8Path, Utf8PathBuf};
+
+use super::options::PackOptions;
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct PackFileMeta {
@@ -15,14 +14,14 @@ pub struct PackFileMeta {
 
 #[derive(Debug, Default)]
 pub struct ScopeMeta {
-  pub path: PathBuf,
+  pub path: Utf8PathBuf,
   pub buckets: usize,
   pub max_pack_size: usize,
   pub last_modified: u64,
   pub packs: Vec<Vec<PackFileMeta>>,
 }
 impl ScopeMeta {
-  pub fn new(dir: &PathBuf, options: &PackOptions) -> Self {
+  pub fn new(dir: &Utf8Path, options: &PackOptions) -> Self {
     let mut packs = vec![];
     for _ in 0..options.buckets {
       packs.push(vec![]);
@@ -39,7 +38,7 @@ impl ScopeMeta {
     }
   }
 
-  pub fn get_path(dir: &PathBuf) -> PathBuf {
+  pub fn get_path(dir: &Utf8Path) -> Utf8PathBuf {
     dir.join("cache_meta")
   }
 }

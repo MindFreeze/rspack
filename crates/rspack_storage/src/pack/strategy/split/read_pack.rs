@@ -1,14 +1,15 @@
-use std::{path::PathBuf, sync::Arc};
+use std::sync::Arc;
 
 use async_trait::async_trait;
 use rspack_error::Result;
+use rspack_paths::Utf8Path;
 
 use super::SplitPackStrategy;
 use crate::pack::{PackContents, PackKeys, PackReadStrategy};
 
 #[async_trait]
 impl PackReadStrategy for SplitPackStrategy {
-  async fn read_pack_keys(&self, path: &PathBuf) -> Result<Option<PackKeys>> {
+  async fn read_pack_keys(&self, path: &Utf8Path) -> Result<Option<PackKeys>> {
     if !self.fs.exists(path).await? {
       return Ok(None);
     }
@@ -30,7 +31,7 @@ impl PackReadStrategy for SplitPackStrategy {
     Ok(Some(keys))
   }
 
-  async fn read_pack_contents(&self, path: &PathBuf) -> Result<Option<PackContents>> {
+  async fn read_pack_contents(&self, path: &Utf8Path) -> Result<Option<PackContents>> {
     if !self.fs.exists(path).await? {
       return Ok(None);
     }
@@ -64,9 +65,10 @@ impl PackReadStrategy for SplitPackStrategy {
 #[cfg(test)]
 mod tests {
 
-  use std::{path::PathBuf, sync::Arc};
+  use std::sync::Arc;
 
   use rspack_error::Result;
+  use rspack_paths::Utf8PathBuf;
   use rustc_hash::FxHashSet as HashSet;
 
   use crate::{
@@ -78,7 +80,7 @@ mod tests {
 
   async fn test_read_keys_non_exists(strategy: &SplitPackStrategy) -> Result<()> {
     let non_exists_keys = strategy
-      .read_pack_keys(&PathBuf::from("/non_exists_path"))
+      .read_pack_keys(&Utf8PathBuf::from("/non_exists_path"))
       .await?;
     assert!(non_exists_keys.is_none());
     Ok(())
@@ -86,13 +88,13 @@ mod tests {
 
   async fn test_read_contents_non_exists(strategy: &SplitPackStrategy) -> Result<()> {
     let non_exists_contents = strategy
-      .read_pack_contents(&PathBuf::from("/non_exists_path"))
+      .read_pack_contents(&Utf8PathBuf::from("/non_exists_path"))
       .await?;
     assert!(non_exists_contents.is_none());
     Ok(())
   }
 
-  async fn test_read_keys(path: &PathBuf, strategy: &SplitPackStrategy) -> Result<()> {
+  async fn test_read_keys(path: &Utf8PathBuf, strategy: &SplitPackStrategy) -> Result<()> {
     let keys = strategy
       .read_pack_keys(path)
       .await?
@@ -104,7 +106,7 @@ mod tests {
     Ok(())
   }
 
-  async fn test_read_contents(path: &PathBuf, strategy: &SplitPackStrategy) -> Result<()> {
+  async fn test_read_contents(path: &Utf8PathBuf, strategy: &SplitPackStrategy) -> Result<()> {
     let contents = strategy
       .read_pack_contents(path)
       .await?
@@ -118,10 +120,10 @@ mod tests {
 
   #[tokio::test]
   async fn should_read_pack() {
-    let dir = PathBuf::from("/cache/test_read_pack");
+    let dir = Utf8PathBuf::from("/cache/test_read_pack");
     let fs = Arc::new(PackMemoryFs::default());
     fs.remove_dir(&dir).await.expect("should clean dir");
-    let strategy = SplitPackStrategy::new(dir.clone(), PathBuf::from("/temp"), fs.clone());
+    let strategy = SplitPackStrategy::new(dir.clone(), Utf8PathBuf::from("/temp"), fs.clone());
     mock_pack_file(&dir.join("./mock_pack"), "mock", 20, fs)
       .await
       .expect("should mock pack file");

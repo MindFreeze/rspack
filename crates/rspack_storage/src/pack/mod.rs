@@ -4,8 +4,8 @@ pub use storage::*;
 mod strategy;
 pub use strategy::*;
 
-mod scope;
-pub use scope::*;
+mod data;
+pub use data::*;
 
 mod fs;
 pub use fs::*;

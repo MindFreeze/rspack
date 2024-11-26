@@ -1,7 +1,8 @@
-use std::{path::PathBuf, sync::Arc};
+use std::sync::Arc;
 
 use async_trait::async_trait;
 use rspack_error::Result;
+use rspack_paths::{Utf8Path, Utf8PathBuf};
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 
 use crate::{
@@ -12,7 +13,7 @@ use crate::{
 pub struct UpdatePacksResult {
   pub new_packs: Vec<(PackFileMeta, Pack)>,
   pub remain_packs: Vec<(PackFileMeta, Pack)>,
-  pub removed_files: Vec<PathBuf>,
+  pub removed_files: Vec<Utf8PathBuf>,
 }
 
 #[async_trait]
@@ -23,15 +24,15 @@ pub trait ScopeStrategy:
 
 #[async_trait]
 pub trait PackReadStrategy {
-  async fn read_pack_keys(&self, path: &PathBuf) -> Result<Option<PackKeys>>;
-  async fn read_pack_contents(&self, path: &PathBuf) -> Result<Option<PackContents>>;
+  async fn read_pack_keys(&self, path: &Utf8Path) -> Result<Option<PackKeys>>;
+  async fn read_pack_contents(&self, path: &Utf8Path) -> Result<Option<PackContents>>;
 }
 
 #[async_trait]
 pub trait PackWriteStrategy {
   async fn update_packs(
     &self,
-    dir: PathBuf,
+    dir: Utf8PathBuf,
     options: &PackOptions,
     packs: HashMap<PackFileMeta, Pack>,
     updates: HashMap<Arc<Vec<u8>>, Option<Arc<Vec<u8>>>>,
@@ -41,7 +42,7 @@ pub trait PackWriteStrategy {
 
 #[async_trait]
 pub trait ScopeReadStrategy {
-  fn get_path(&self, sub: &str) -> PathBuf;
+  fn get_path(&self, sub: &str) -> Utf8PathBuf;
   async fn ensure_meta(&self, scope: &mut PackScope) -> Result<()>;
   async fn ensure_packs(&self, scope: &mut PackScope) -> Result<()>;
   async fn ensure_keys(&self, scope: &mut PackScope) -> Result<()>;
@@ -115,8 +116,8 @@ pub trait ScopeValidateStrategy {
 
 #[derive(Debug, Default)]
 pub struct WriteScopeResult {
-  pub writed_files: HashSet<PathBuf>,
-  pub removed_files: HashSet<PathBuf>,
+  pub writed_files: HashSet<Utf8PathBuf>,
+  pub removed_files: HashSet<Utf8PathBuf>,
 }
 
 impl WriteScopeResult {
@@ -131,8 +132,8 @@ pub trait ScopeWriteStrategy {
   async fn before_save(&self) -> Result<()>;
   async fn after_save(
     &self,
-    writed_files: HashSet<PathBuf>,
-    removed_files: HashSet<PathBuf>,
+    writed_files: HashSet<Utf8PathBuf>,
+    removed_files: HashSet<Utf8PathBuf>,
   ) -> Result<()>;
   async fn update_scope(
     &self,

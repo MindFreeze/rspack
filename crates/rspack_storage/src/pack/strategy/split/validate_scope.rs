@@ -62,7 +62,7 @@ impl ScopeValidateStrategy for SplitPackStrategy {
     } else {
       let invalid_pack_paths = invalid_packs
         .iter()
-        .map(|(_, (_, pack))| pack.path.to_string_lossy().to_string())
+        .map(|(_, (_, pack))| pack.path.to_string())
         .collect_vec();
       Ok(ValidateResult::invalid_with_packs(
         "some packs is modified",
@@ -74,9 +74,10 @@ impl ScopeValidateStrategy for SplitPackStrategy {
 
 #[cfg(test)]
 mod tests {
-  use std::{path::PathBuf, sync::Arc};
+  use std::sync::Arc;
 
   use rspack_error::Result;
+  use rspack_paths::Utf8PathBuf;
   use rustc_hash::FxHashSet as HashSet;
 
   use crate::{
@@ -90,7 +91,7 @@ mod tests {
     PackFs, PackMemoryFs, PackOptions,
   };
 
-  async fn test_valid_meta(scope_path: PathBuf, strategy: &SplitPackStrategy) -> Result<()> {
+  async fn test_valid_meta(scope_path: Utf8PathBuf, strategy: &SplitPackStrategy) -> Result<()> {
     let same_options = Arc::new(PackOptions {
       buckets: 10,
       max_pack_size: 100,
@@ -105,7 +106,7 @@ mod tests {
   }
 
   async fn test_invalid_option_changed(
-    scope_path: PathBuf,
+    scope_path: Utf8PathBuf,
     strategy: &SplitPackStrategy,
   ) -> Result<()> {
     let bucket_changed_options = Arc::new(PackOptions {
@@ -137,7 +138,10 @@ mod tests {
     Ok(())
   }
 
-  async fn test_invalid_expired(scope_path: PathBuf, strategy: &SplitPackStrategy) -> Result<()> {
+  async fn test_invalid_expired(
+    scope_path: Utf8PathBuf,
+    strategy: &SplitPackStrategy,
+  ) -> Result<()> {
     let expired_options = Arc::new(PackOptions {
       buckets: 10,
       max_pack_size: 100,
@@ -152,7 +156,7 @@ mod tests {
   }
 
   async fn test_valid_packs(
-    scope_path: PathBuf,
+    scope_path: Utf8PathBuf,
     strategy: &SplitPackStrategy,
     options: Arc<PackOptions>,
   ) -> Result<()> {
@@ -165,15 +169,15 @@ mod tests {
   }
 
   async fn test_invalid_packs_changed(
-    scope_path: PathBuf,
+    scope_path: Utf8PathBuf,
     strategy: &SplitPackStrategy,
     fs: Arc<dyn PackFs>,
     options: Arc<PackOptions>,
-    files: HashSet<PathBuf>,
+    files: HashSet<Utf8PathBuf>,
   ) -> Result<()> {
     let mut scope = PackScope::new(scope_path, options);
     for file in files {
-      if !file.to_string_lossy().to_string().contains("cache_meta") {
+      if !file.to_string().contains("cache_meta") {
         flush_file_mtime(&file, fs.clone()).await?;
       }
     }
@@ -191,15 +195,15 @@ mod tests {
   #[tokio::test]
   async fn should_validate_scope_meta() {
     let fs = Arc::new(PackMemoryFs::default());
-    fs.remove_dir(&PathBuf::from("/cache/test_meta_valid"))
+    fs.remove_dir(&Utf8PathBuf::from("/cache/test_meta_valid"))
       .await
       .expect("should clean dir");
     let strategy = SplitPackStrategy::new(
-      PathBuf::from("/cache/test_meta_valid"),
-      PathBuf::from("/temp/test_meta_valid"),
+      Utf8PathBuf::from("/cache/test_meta_valid"),
+      Utf8PathBuf::from("/temp/test_meta_valid"),
       fs.clone(),
     );
-    let scope_path = PathBuf::from("/cache/test_meta_valid/validate_meta");
+    let scope_path = Utf8PathBuf::from("/cache/test_meta_valid/validate_meta");
     let pack_options = Arc::new(PackOptions {
       buckets: 10,
       max_pack_size: 100,
@@ -230,15 +234,15 @@ mod tests {
   #[tokio::test]
   async fn should_validate_scope_packs() {
     let fs = Arc::new(PackMemoryFs::default());
-    fs.remove_dir(&PathBuf::from("/cache/test_packs_valid"))
+    fs.remove_dir(&Utf8PathBuf::from("/cache/test_packs_valid"))
       .await
       .expect("should clean dir");
     let strategy = SplitPackStrategy::new(
-      PathBuf::from("/cache/test_packs_valid"),
-      PathBuf::from("/temp/test_packs_valid"),
+      Utf8PathBuf::from("/cache/test_packs_valid"),
+      Utf8PathBuf::from("/temp/test_packs_valid"),
       fs.clone(),
     );
-    let scope_path = PathBuf::from("/cache/test_packs_valid/validate_packs");
+    let scope_path = Utf8PathBuf::from("/cache/test_packs_valid/validate_packs");
     let pack_options = Arc::new(PackOptions {
       buckets: 10,
       max_pack_size: 100,

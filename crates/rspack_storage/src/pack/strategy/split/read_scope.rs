@@ -1,9 +1,10 @@
-use std::{path::PathBuf, sync::Arc};
+use std::sync::Arc;
 
 use async_trait::async_trait;
 use futures::{future::join_all, TryFutureExt};
 use itertools::Itertools;
 use rspack_error::{error, Result};
+use rspack_paths::{Utf8Path, Utf8PathBuf};
 
 use super::{util::get_indexed_packs, SplitPackStrategy};
 use crate::pack::{
@@ -80,12 +81,12 @@ impl ScopeReadStrategy for SplitPackStrategy {
     Ok(())
   }
 
-  fn get_path(&self, str: &str) -> PathBuf {
+  fn get_path(&self, str: &str) -> Utf8PathBuf {
     self.root.join(str)
   }
 }
 
-async fn read_scope_meta(path: &PathBuf, fs: Arc<dyn PackFs>) -> Result<Option<ScopeMeta>> {
+async fn read_scope_meta(path: &Utf8Path, fs: Arc<dyn PackFs>) -> Result<Option<ScopeMeta>> {
   if !fs.exists(path).await? {
     return Ok(None);
   }
@@ -140,7 +141,7 @@ async fn read_scope_meta(path: &PathBuf, fs: Arc<dyn PackFs>) -> Result<Option<S
   }
 
   Ok(Some(ScopeMeta {
-    path: path.clone(),
+    path: path.to_path_buf(),
     buckets,
     max_pack_size,
     last_modified,
@@ -227,10 +228,11 @@ async fn read_contents(
 #[cfg(test)]
 mod tests {
 
-  use std::{collections::HashSet, path::PathBuf, sync::Arc};
+  use std::{collections::HashSet, sync::Arc};
 
   use itertools::Itertools;
   use rspack_error::Result;
+  use rspack_paths::{Utf8Path, Utf8PathBuf};
 
   use crate::{
     pack::{
@@ -240,7 +242,7 @@ mod tests {
     PackOptions,
   };
 
-  async fn mock_scope(path: &PathBuf, fs: Arc<dyn PackFs>, options: &PackOptions) -> Result<()> {
+  async fn mock_scope(path: &Utf8Path, fs: Arc<dyn PackFs>, options: &PackOptions) -> Result<()> {
     mock_meta_file(&ScopeMeta::get_path(path), fs.clone(), options, 3).await?;
     for bucket_id in 0..options.buckets {
       for pack_no in 0..3 {
@@ -328,14 +330,17 @@ mod tests {
   #[tokio::test]
   async fn should_read_scope() {
     let fs = Arc::new(PackMemoryFs::default());
-    let strategy =
-      SplitPackStrategy::new(PathBuf::from("/cache"), PathBuf::from("/temp"), fs.clone());
+    let strategy = SplitPackStrategy::new(
+      Utf8PathBuf::from("/cache"),
+      Utf8PathBuf::from("/temp"),
+      fs.clone(),
+    );
     let options = Arc::new(PackOptions {
       buckets: 1,
       max_pack_size: 16,
       expires: 60000,
     });
-    let mut scope = PackScope::new(PathBuf::from("/cache/test_read_meta"), options.clone());
+    let mut scope = PackScope::new(Utf8PathBuf::from("/cache/test_read_meta"), options.clone());
     clean_scope_path(&scope, &strategy, fs.clone()).await;
 
     mock_scope(&scope.path, fs.clone(), &scope.options)

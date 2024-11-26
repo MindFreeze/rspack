@@ -1,6 +1,6 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct PackOptions {
   pub buckets: usize,
   pub max_pack_size: usize,

@@ -4,6 +4,7 @@ use std::{
 };
 
 use rspack_error::Result;
+use rspack_paths::AssertUtf8;
 use rustc_hash::FxHashMap as HashMap;
 use tokio::sync::oneshot::Receiver;
 
@@ -29,8 +30,8 @@ pub struct PackStorageOptions {
 impl PackStorage {
   pub fn new(options: PackStorageOptions) -> Self {
     let strategy: Arc<dyn ScopeStrategy> = Arc::new(SplitPackStrategy::new(
-      options.root,
-      options.temp_root,
+      options.root.assert_utf8(),
+      options.temp_root.assert_utf8(),
       options.fs,
     ));
     Self {

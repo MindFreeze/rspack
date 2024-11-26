@@ -1,12 +1,11 @@
 use std::{
   io::{BufRead, Cursor, Read, Seek},
-  path::PathBuf,
   sync::Arc,
 };
 
 use rspack_error::Result;
-use rspack_fs::{AsyncWritableFileSystem, MemoryFileSystem, ReadableFileSystem};
-use rspack_paths::{AssertUtf8, Utf8PathBuf};
+use rspack_fs::{MemoryFileSystem, ReadableFileSystem, WritableFileSystem};
+use rspack_paths::{Utf8Path, Utf8PathBuf};
 
 use super::{FileMeta, PackFileReader, PackFileWriter, PackFs, PackFsError, PackFsErrorOpt};
 
@@ -15,9 +14,8 @@ pub struct PackMemoryFs(pub Arc<MemoryFileSystem>);
 
 #[async_trait::async_trait]
 impl PackFs for PackMemoryFs {
-  async fn exists(&self, path: &PathBuf) -> Result<bool> {
-    let path = path.to_owned().assert_utf8();
-    match self.0.metadata(&path) {
+  async fn exists(&self, path: &Utf8Path) -> Result<bool> {
+    match self.0.metadata(path) {
       Ok(_) => Ok(true),
       Err(e) => {
         if e.to_string().contains("file not exist") {
@@ -29,42 +27,42 @@ impl PackFs for PackMemoryFs {
     }
   }
 
-  async fn remove_dir(&self, path: &PathBuf) -> Result<()> {
+  async fn remove_dir(&self, path: &Utf8Path) -> Result<()> {
     self
       .0
-      .remove_dir_all(&path.to_owned().assert_utf8())
+      .remove_dir_all(path)
       .await
       .map_err(|e| PackFsError::from_fs_error(path, PackFsErrorOpt::Remove, e))?;
     Ok(())
   }
 
-  async fn ensure_dir(&self, path: &PathBuf) -> Result<()> {
+  async fn ensure_dir(&self, path: &Utf8Path) -> Result<()> {
     self
       .0
-      .create_dir_all(&path.to_owned().assert_utf8())
+      .create_dir_all(path)
       .await
       .map_err(|e| PackFsError::from_fs_error(path, PackFsErrorOpt::Dir, e))?;
     Ok(())
   }
 
-  async fn write_file(&self, path: &PathBuf) -> Result<Box<dyn PackFileWriter>> {
+  async fn write_file(&self, path: &Utf8Path) -> Result<Box<dyn PackFileWriter>> {
     Ok(Box::new(MemoryFileWriter::new(
-      path.to_owned().assert_utf8(),
+      path.to_path_buf(),
       self.0.clone(),
     )))
   }
 
-  async fn read_file(&self, path: &PathBuf) -> Result<Box<dyn PackFileReader>> {
+  async fn read_file(&self, path: &Utf8Path) -> Result<Box<dyn PackFileReader>> {
     Ok(Box::new(MemoryFileReader::new(
-      path.to_owned(),
+      path.to_path_buf(),
       self.0.clone(),
     )))
   }
 
-  async fn metadata(&self, path: &PathBuf) -> Result<FileMeta> {
+  async fn metadata(&self, path: &Utf8Path) -> Result<FileMeta> {
     let meta_data = self
       .0
-      .metadata(&path.to_owned().assert_utf8())
+      .metadata(path)
       .map_err(|e| PackFsError::from_fs_error(path, PackFsErrorOpt::Stat, e))?;
     Ok(FileMeta {
       size: meta_data.size,
@@ -74,19 +72,19 @@ impl PackFs for PackMemoryFs {
     })
   }
 
-  async fn remove_file(&self, path: &PathBuf) -> Result<()> {
+  async fn remove_file(&self, path: &Utf8Path) -> Result<()> {
     self
       .0
-      .remove_file(&path.to_owned().assert_utf8())
+      .remove_file(path)
       .await
       .map_err(|e| PackFsError::from_fs_error(path, PackFsErrorOpt::Remove, e))?;
     Ok(())
   }
 
-  async fn move_file(&self, from: &PathBuf, to: &PathBuf) -> Result<()> {
+  async fn move_file(&self, from: &Utf8Path, to: &Utf8Path) -> Result<()> {
     self
       .0
-      .rename(&from.to_owned().assert_utf8(), &to.to_owned().assert_utf8())
+      .rename(from, to)
       .await
       .map_err(|e| PackFsError::from_fs_error(from, PackFsErrorOpt::Move, e))?;
     Ok(())
@@ -136,13 +134,13 @@ impl PackFileWriter for MemoryFileWriter {
 
 #[derive(Debug)]
 pub struct MemoryFileReader {
-  path: PathBuf,
+  path: Utf8PathBuf,
   reader: Option<Cursor<Vec<u8>>>,
   fs: Arc<MemoryFileSystem>,
 }
 
 impl MemoryFileReader {
-  pub fn new(path: PathBuf, fs: Arc<MemoryFileSystem>) -> Self {
+  pub fn new(path: Utf8PathBuf, fs: Arc<MemoryFileSystem>) -> Self {
     Self {
       path,
       reader: None,
@@ -154,8 +152,7 @@ impl MemoryFileReader {
 impl MemoryFileReader {
   async fn ensure_contents(&mut self) -> Result<()> {
     if self.reader.is_none() {
-      let path = self.path.to_owned().assert_utf8();
-      let contents = self.fs.read_file(&path).await?;
+      let contents = self.fs.read_file(&self.path).await?;
       self.reader = Some(Cursor::new(contents));
     }
     Ok(())
@@ -215,39 +212,42 @@ impl PackFileReader for MemoryFileReader {
 
 #[cfg(test)]
 mod tests {
-  use std::{path::PathBuf, sync::Arc};
+  use std::sync::Arc;
 
   use rspack_error::Result;
   use rspack_fs::MemoryFileSystem;
+  use rspack_paths::Utf8PathBuf;
 
   use super::PackMemoryFs;
   use crate::pack::PackFs;
 
+  fn get_path(p: &str) -> Utf8PathBuf {
+    Utf8PathBuf::from(p)
+  }
+
   async fn test_create_dir(fs: &PackMemoryFs) -> Result<()> {
-    fs.ensure_dir(&PathBuf::from("/parent/from")).await?;
-    fs.ensure_dir(&PathBuf::from("/parent/to")).await?;
+    fs.ensure_dir(&get_path("/parent/from")).await?;
+    fs.ensure_dir(&get_path("/parent/to")).await?;
 
-    assert!(fs.exists(&PathBuf::from("/parent/from")).await?);
-    assert!(fs.exists(&PathBuf::from("/parent/to")).await?);
+    assert!(fs.exists(&get_path("/parent/from")).await?);
+    assert!(fs.exists(&get_path("/parent/to")).await?);
 
-    assert!(fs.metadata(&PathBuf::from("/parent/from")).await?.is_dir);
-    assert!(fs.metadata(&PathBuf::from("/parent/to")).await?.is_dir);
+    assert!(fs.metadata(&get_path("/parent/from")).await?.is_dir);
+    assert!(fs.metadata(&get_path("/parent/to")).await?.is_dir);
 
     Ok(())
   }
 
   async fn test_write_file(fs: &PackMemoryFs) -> Result<()> {
-    let mut writer = fs
-      .write_file(&PathBuf::from("/parent/from/file.txt"))
-      .await?;
+    let mut writer = fs.write_file(&get_path("/parent/from/file.txt")).await?;
 
     writer.line("hello").await?;
     writer.bytes(b" world").await?;
     writer.flush().await?;
 
-    assert!(fs.exists(&PathBuf::from("/parent/from/file.txt")).await?);
+    assert!(fs.exists(&get_path("/parent/from/file.txt")).await?);
     assert!(
-      fs.metadata(&PathBuf::from("/parent/from/file.txt"))
+      fs.metadata(&get_path("/parent/from/file.txt"))
         .await?
         .is_file
     );
@@ -256,9 +256,7 @@ mod tests {
   }
 
   async fn test_read_file(fs: &PackMemoryFs) -> Result<()> {
-    let mut reader = fs
-      .read_file(&PathBuf::from("/parent/from/file.txt"))
-      .await?;
+    let mut reader = fs.read_file(&get_path("/parent/from/file.txt")).await?;
 
     assert_eq!(reader.line().await?, "hello");
     assert_eq!(reader.bytes(b" world".len()).await?, b" world");
@@ -268,45 +266,37 @@ mod tests {
 
   async fn test_move_file(fs: &PackMemoryFs) -> Result<()> {
     fs.move_file(
-      &PathBuf::from("/parent/from/file.txt"),
-      &PathBuf::from("/parent/to/file.txt"),
+      &get_path("/parent/from/file.txt"),
+      &get_path("/parent/to/file.txt"),
     )
     .await?;
-    assert!(!fs.exists(&PathBuf::from("/parent/from/file.txt")).await?);
-    assert!(fs.exists(&PathBuf::from("/parent/to/file.txt")).await?);
-    assert!(
-      fs.metadata(&PathBuf::from("/parent/to/file.txt"))
-        .await?
-        .is_file
-    );
+    assert!(!fs.exists(&get_path("/parent/from/file.txt")).await?);
+    assert!(fs.exists(&get_path("/parent/to/file.txt")).await?);
+    assert!(fs.metadata(&get_path("/parent/to/file.txt")).await?.is_file);
 
     Ok(())
   }
 
   async fn test_remove_file(fs: &PackMemoryFs) -> Result<()> {
-    fs.remove_file(&PathBuf::from("/parent/to/file.txt"))
-      .await?;
-    assert!(!fs.exists(&PathBuf::from("/parent/to/file.txt")).await?);
+    fs.remove_file(&get_path("/parent/to/file.txt")).await?;
+    assert!(!fs.exists(&get_path("/parent/to/file.txt")).await?);
     Ok(())
   }
 
   async fn test_remove_dir(fs: &PackMemoryFs) -> Result<()> {
-    fs.remove_dir(&PathBuf::from("/parent/from")).await?;
-    fs.remove_dir(&PathBuf::from("/parent/to")).await?;
-    assert!(!fs.exists(&PathBuf::from("/parent/from")).await?);
-    assert!(!fs.exists(&PathBuf::from("/parent/to")).await?);
+    fs.remove_dir(&get_path("/parent/from")).await?;
+    fs.remove_dir(&get_path("/parent/to")).await?;
+    assert!(!fs.exists(&get_path("/parent/from")).await?);
+    assert!(!fs.exists(&get_path("/parent/to")).await?);
     Ok(())
   }
 
   async fn test_error(fs: &PackMemoryFs) -> Result<()> {
-    match fs
-      .metadata(&PathBuf::from("/parent/from/not_exist.txt"))
-      .await
-    {
+    match fs.metadata(&get_path("/parent/from/not_exist.txt")).await {
       Ok(_) => panic!("should error"),
       Err(e) => assert_eq!(
         e.to_string(),
-        r#"Rspack Storage FS Error: stat `/parent/from/not_exist.txt` failed with `IO error: file not exist`"#
+        r#"Rspack Storage FS Error: stat `/parent/from/not_exist.txt` failed with `Rspack FS Error: file not exist`"#
       ),
     };
 

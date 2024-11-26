@@ -6,9 +6,10 @@ use rustc_hash::FxHasher;
 
 use crate::pack::{Pack, PackContents, PackFileMeta, PackKeys, PackScope};
 
-pub fn get_indexed_packs(
-  scope: &PackScope,
-) -> Result<(Vec<(usize, usize)>, Vec<(&PackFileMeta, &Pack)>)> {
+pub type PackIndexList = Vec<(usize, usize)>;
+pub type PackInfoList<'a> = Vec<(&'a PackFileMeta, &'a Pack)>;
+
+pub fn get_indexed_packs(scope: &PackScope) -> Result<(PackIndexList, PackInfoList)> {
   let meta = scope.meta.expect_value();
   let packs = scope.packs.expect_value();
 

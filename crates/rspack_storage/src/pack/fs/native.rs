@@ -2,10 +2,10 @@ use std::{
   fs::{remove_dir_all, File},
   io::{BufRead, BufReader, BufWriter, Read, Write},
   os::unix::fs::MetadataExt,
-  path::PathBuf,
 };
 
 use rspack_error::Result;
+use rspack_paths::{Utf8Path, Utf8PathBuf};
 
 use super::{FileMeta, PackFileReader, PackFileWriter, PackFs, PackFsError, PackFsErrorOpt};
 
@@ -14,11 +14,11 @@ pub struct PackNativeFs;
 
 #[async_trait::async_trait]
 impl PackFs for PackNativeFs {
-  async fn exists(&self, path: &PathBuf) -> Result<bool> {
+  async fn exists(&self, path: &Utf8Path) -> Result<bool> {
     Ok(path.exists())
   }
 
-  async fn remove_dir(&self, path: &PathBuf) -> Result<()> {
+  async fn remove_dir(&self, path: &Utf8Path) -> Result<()> {
     if path.exists() {
       remove_dir_all(path)
         .map_err(|e| PackFsError::from_io_error(path, PackFsErrorOpt::Remove, e).into())
@@ -27,33 +27,33 @@ impl PackFs for PackNativeFs {
     }
   }
 
-  async fn ensure_dir(&self, path: &PathBuf) -> Result<()> {
+  async fn ensure_dir(&self, path: &Utf8Path) -> Result<()> {
     std::fs::create_dir_all(path)
       .map_err(|e| PackFsError::from_io_error(path, PackFsErrorOpt::Dir, e).into())
   }
 
-  async fn write_file(&self, path: &PathBuf) -> Result<Box<dyn PackFileWriter>> {
+  async fn write_file(&self, path: &Utf8Path) -> Result<Box<dyn PackFileWriter>> {
     self
-      .ensure_dir(&PathBuf::from(path.parent().expect("should have parent")))
+      .ensure_dir(path.parent().expect("should have parent"))
       .await?;
     let file =
       File::create(path).map_err(|e| PackFsError::from_io_error(path, PackFsErrorOpt::Write, e))?;
     Ok(Box::new(NativeFileWriter::new(
-      path.clone(),
+      path.to_path_buf(),
       BufWriter::new(file),
     )))
   }
 
-  async fn read_file(&self, path: &PathBuf) -> Result<Box<dyn PackFileReader>> {
+  async fn read_file(&self, path: &Utf8Path) -> Result<Box<dyn PackFileReader>> {
     let file =
       File::open(path).map_err(|e| PackFsError::from_io_error(path, PackFsErrorOpt::Read, e))?;
     Ok(Box::new(NativeFileReader::new(
-      path.clone(),
+      path.to_path_buf(),
       BufReader::new(file),
     )))
   }
 
-  async fn metadata(&self, path: &PathBuf) -> Result<FileMeta> {
+  async fn metadata(&self, path: &Utf8Path) -> Result<FileMeta> {
     let file =
       File::open(path).map_err(|e| PackFsError::from_io_error(path, PackFsErrorOpt::Read, e))?;
     let meta_data = file
@@ -67,7 +67,7 @@ impl PackFs for PackNativeFs {
     })
   }
 
-  async fn remove_file(&self, path: &PathBuf) -> Result<()> {
+  async fn remove_file(&self, path: &Utf8Path) -> Result<()> {
     if path.exists() {
       std::fs::remove_file(path)
         .map_err(|e| PackFsError::from_io_error(path, PackFsErrorOpt::Remove, e).into())
@@ -76,10 +76,10 @@ impl PackFs for PackNativeFs {
     }
   }
 
-  async fn move_file(&self, from: &PathBuf, to: &PathBuf) -> Result<()> {
+  async fn move_file(&self, from: &Utf8Path, to: &Utf8Path) -> Result<()> {
     if from.exists() {
       self
-        .ensure_dir(&PathBuf::from(to.parent().expect("should have parent")))
+        .ensure_dir(&Utf8PathBuf::from(to.parent().expect("should have parent")))
         .await?;
       std::fs::rename(from, to)
         .map_err(|e| PackFsError::from_io_error(from, PackFsErrorOpt::Move, e).into())
@@ -91,12 +91,12 @@ impl PackFs for PackNativeFs {
 
 #[derive(Debug)]
 pub struct NativeFileWriter {
-  path: PathBuf,
+  path: Utf8PathBuf,
   inner: BufWriter<File>,
 }
 
 impl NativeFileWriter {
-  pub fn new(path: PathBuf, inner: BufWriter<File>) -> Self {
+  pub fn new(path: Utf8PathBuf, inner: BufWriter<File>) -> Self {
     Self { path, inner }
   }
 }
@@ -133,12 +133,12 @@ impl PackFileWriter for NativeFileWriter {
 
 #[derive(Debug)]
 pub struct NativeFileReader {
-  path: PathBuf,
+  path: Utf8PathBuf,
   inner: BufReader<File>,
 }
 
 impl NativeFileReader {
-  pub fn new(path: PathBuf, inner: BufReader<File>) -> Self {
+  pub fn new(path: Utf8PathBuf, inner: BufReader<File>) -> Self {
     Self { path, inner }
   }
 }
@@ -184,17 +184,17 @@ impl PackFileReader for NativeFileReader {
 
 #[cfg(test)]
 mod tests {
-  use std::path::PathBuf;
-
   use rspack_error::Result;
+  use rspack_paths::{AssertUtf8, Utf8PathBuf};
 
   use super::PackNativeFs;
   use crate::pack::PackFs;
 
-  fn get_path(p: &str) -> PathBuf {
+  fn get_path(p: &str) -> Utf8PathBuf {
     std::env::temp_dir()
       .join("./rspack_test/storage")
       .join(format!(".{p}").as_str())
+      .assert_utf8()
   }
 
   async fn test_create_dir(fs: &PackNativeFs) -> Result<()> {

@@ -1,4 +1,3 @@
-use std::path::PathBuf;
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -7,6 +6,7 @@ use futures::TryFutureExt;
 use itertools::Itertools;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use rspack_error::{error, Result};
+use rspack_paths::Utf8PathBuf;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 
 use super::{util::choose_bucket, SplitPackStrategy};
@@ -26,8 +26,8 @@ impl ScopeWriteStrategy for SplitPackStrategy {
 
   async fn after_save(
     &self,
-    writed_files: HashSet<PathBuf>,
-    removed_files: HashSet<PathBuf>,
+    writed_files: HashSet<Utf8PathBuf>,
+    removed_files: HashSet<Utf8PathBuf>,
   ) -> Result<()> {
     self.move_temp_files(writed_files).await?;
     self.remove_files(removed_files).await?;
@@ -185,7 +185,7 @@ impl ScopeWriteStrategy for SplitPackStrategy {
     let path = self.get_temp_path(&meta.path)?;
     self
       .fs
-      .ensure_dir(&PathBuf::from(path.parent().expect("should have parent")))
+      .ensure_dir(path.parent().expect("should have parent"))
       .await?;
 
     let mut writer = self.fs.write_file(&path).await?;
@@ -230,7 +230,10 @@ impl ScopeWriteStrategy for SplitPackStrategy {
   }
 }
 
-async fn save_pack(pack: Pack, strategy: &SplitPackStrategy) -> Result<(String, PathBuf, usize)> {
+async fn save_pack(
+  pack: Pack,
+  strategy: &SplitPackStrategy,
+) -> Result<(String, Utf8PathBuf, usize)> {
   let keys = pack.keys.expect_value();
   let contents = pack.contents.expect_value();
   if keys.len() != contents.len() {
@@ -246,7 +249,7 @@ async fn save_pack(pack: Pack, strategy: &SplitPackStrategy) -> Result<(String, 
 async fn batch_write_packs(
   packs: Vec<Pack>,
   strategy: &SplitPackStrategy,
-) -> Result<Vec<(String, PathBuf, usize)>> {
+) -> Result<Vec<(String, Utf8PathBuf, usize)>> {
   let tasks = packs.into_iter().map(|pack| {
     let strategy = strategy.to_owned();
     tokio::spawn(async move { save_pack(pack, &strategy).await }).map_err(|e| error!("{}", e))
@@ -255,7 +258,7 @@ async fn batch_write_packs(
   let writed = join_all(tasks)
     .await
     .into_iter()
-    .collect::<Result<Vec<Result<(String, PathBuf, usize)>>>>()?;
+    .collect::<Result<Vec<Result<(String, Utf8PathBuf, usize)>>>>()?;
 
   let mut res = vec![];
   for item in writed {
@@ -266,9 +269,10 @@ async fn batch_write_packs(
 
 #[cfg(test)]
 mod tests {
-  use std::{collections::HashMap, path::PathBuf, sync::Arc};
+  use std::{collections::HashMap, sync::Arc};
 
   use rspack_error::Result;
+  use rspack_paths::Utf8PathBuf;
 
   use crate::{
     pack::{
@@ -457,14 +461,20 @@ mod tests {
   #[tokio::test]
   async fn should_write_single_bucket_scope() {
     let fs = Arc::new(PackMemoryFs::default());
-    let strategy =
-      SplitPackStrategy::new(PathBuf::from("/cache"), PathBuf::from("/temp"), fs.clone());
+    let strategy = SplitPackStrategy::new(
+      Utf8PathBuf::from("/cache"),
+      Utf8PathBuf::from("/temp"),
+      fs.clone(),
+    );
     let options = Arc::new(PackOptions {
       buckets: 1,
       max_pack_size: 32,
       expires: 1000000,
     });
-    let mut scope = PackScope::empty(PathBuf::from("/cache/test_single_bucket"), options.clone());
+    let mut scope = PackScope::empty(
+      Utf8PathBuf::from("/cache/test_single_bucket"),
+      options.clone(),
+    );
     clean_scope_path(&scope, &strategy, fs.clone()).await;
 
     let _ = test_single_bucket(&mut scope, &strategy)
@@ -477,14 +487,20 @@ mod tests {
   #[tokio::test]
   async fn should_write_multi_bucket_scope() {
     let fs = Arc::new(PackMemoryFs::default());
-    let strategy =
-      SplitPackStrategy::new(PathBuf::from("/cache"), PathBuf::from("/temp"), fs.clone());
+    let strategy = SplitPackStrategy::new(
+      Utf8PathBuf::from("/cache"),
+      Utf8PathBuf::from("/temp"),
+      fs.clone(),
+    );
     let options = Arc::new(PackOptions {
       buckets: 10,
       max_pack_size: 32,
       expires: 1000000,
     });
-    let mut scope = PackScope::empty(PathBuf::from("/cache/test_multi_bucket"), options.clone());
+    let mut scope = PackScope::empty(
+      Utf8PathBuf::from("/cache/test_multi_bucket"),
+      options.clone(),
+    );
     clean_scope_path(&scope, &strategy, fs.clone()).await;
 
     let _ = test_multi_bucket(&mut scope, &strategy).await.map_err(|e| {
@@ -495,14 +511,17 @@ mod tests {
   #[tokio::test]
   async fn should_write_big_bucket_scope() {
     let fs = Arc::new(PackMemoryFs::default());
-    let strategy =
-      SplitPackStrategy::new(PathBuf::from("/cache"), PathBuf::from("/temp"), fs.clone());
+    let strategy = SplitPackStrategy::new(
+      Utf8PathBuf::from("/cache"),
+      Utf8PathBuf::from("/temp"),
+      fs.clone(),
+    );
     let options = Arc::new(PackOptions {
       buckets: 1,
       max_pack_size: 2000,
       expires: 1000000,
     });
-    let mut scope = PackScope::empty(PathBuf::from("/cache/test_big_bucket"), options.clone());
+    let mut scope = PackScope::empty(Utf8PathBuf::from("/cache/test_big_bucket"), options.clone());
     clean_scope_path(&scope, &strategy, fs.clone()).await;
 
     let _ = test_big_bucket(&mut scope, &strategy).await.map_err(|e| {

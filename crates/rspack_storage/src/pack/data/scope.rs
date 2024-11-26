@@ -1,10 +1,11 @@
-use std::{path::PathBuf, sync::Arc};
+use std::sync::Arc;
 
 use itertools::Itertools;
+use rspack_paths::Utf8PathBuf;
 use rustc_hash::FxHashSet as HashSet;
 
-use crate::pack::PackKeysState;
-use crate::pack::{Pack, PackContentsState, PackOptions, ScopeMeta};
+use super::{Pack, PackContentsState, PackKeysState, PackOptions, ScopeMeta};
+use crate::StorageContent;
 
 #[derive(Debug, Default)]
 pub enum ScopeMetaState {
@@ -66,15 +67,15 @@ impl ScopePacksState {
 
 #[derive(Debug)]
 pub struct PackScope {
-  pub path: PathBuf,
+  pub path: Utf8PathBuf,
   pub options: Arc<PackOptions>,
   pub meta: ScopeMetaState,
   pub packs: ScopePacksState,
-  pub removed: HashSet<PathBuf>,
+  pub removed: HashSet<Utf8PathBuf>,
 }
 
 impl PackScope {
-  pub fn new(path: PathBuf, options: Arc<PackOptions>) -> Self {
+  pub fn new(path: Utf8PathBuf, options: Arc<PackOptions>) -> Self {
     Self {
       path,
       options,
@@ -84,7 +85,7 @@ impl PackScope {
     }
   }
 
-  pub fn empty(path: PathBuf, options: Arc<PackOptions>) -> Self {
+  pub fn empty(path: Utf8PathBuf, options: Arc<PackOptions>) -> Self {
     let meta = ScopeMeta::new(&path, &options);
     let packs = vec![vec![]; options.buckets];
 
@@ -108,7 +109,7 @@ impl PackScope {
         .all(|pack| pack.loaded())
   }
 
-  pub fn get_contents(&self) -> Vec<(Arc<Vec<u8>>, Arc<Vec<u8>>)> {
+  pub fn get_contents(&self) -> StorageContent {
     self
       .packs
       .expect_value()

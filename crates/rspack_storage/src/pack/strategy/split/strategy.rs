@@ -1,7 +1,8 @@
-use std::{hash::Hasher, path::PathBuf, sync::Arc};
+use std::{hash::Hasher, sync::Arc};
 
 use futures::{future::join_all, TryFutureExt};
 use rspack_error::{error, Result};
+use rspack_paths::{Utf8Path, Utf8PathBuf};
 use rustc_hash::{FxHashSet as HashSet, FxHasher};
 
 use super::util::get_name;
@@ -10,12 +11,12 @@ use crate::pack::{PackContents, PackFs, PackKeys, ScopeStrategy};
 #[derive(Debug, Clone)]
 pub struct SplitPackStrategy {
   pub fs: Arc<dyn PackFs>,
-  pub root: PathBuf,
-  pub temp_root: PathBuf,
+  pub root: Utf8PathBuf,
+  pub temp_root: Utf8PathBuf,
 }
 
 impl SplitPackStrategy {
-  pub fn new(root: PathBuf, temp_root: PathBuf, fs: Arc<dyn PackFs>) -> Self {
+  pub fn new(root: Utf8PathBuf, temp_root: Utf8PathBuf, fs: Arc<dyn PackFs>) -> Self {
     Self {
       fs,
       root,
@@ -23,7 +24,7 @@ impl SplitPackStrategy {
     }
   }
 
-  pub async fn move_temp_files(&self, files: HashSet<PathBuf>) -> Result<()> {
+  pub async fn move_temp_files(&self, files: HashSet<Utf8PathBuf>) -> Result<()> {
     let mut candidates = vec![];
     for to in files {
       let from = self.get_temp_path(&to)?;
@@ -44,7 +45,7 @@ impl SplitPackStrategy {
     Ok(())
   }
 
-  pub async fn remove_files(&self, files: HashSet<PathBuf>) -> Result<()> {
+  pub async fn remove_files(&self, files: HashSet<Utf8PathBuf>) -> Result<()> {
     let tasks = files.into_iter().map(|path| {
       let fs = self.fs.to_owned();
       tokio::spawn(async move { fs.remove_file(&path).await })
@@ -59,7 +60,7 @@ impl SplitPackStrategy {
     Ok(())
   }
 
-  pub fn get_temp_path(&self, path: &PathBuf) -> Result<PathBuf> {
+  pub fn get_temp_path(&self, path: &Utf8Path) -> Result<Utf8PathBuf> {
     let relative_path = path
       .strip_prefix(&*self.root)
       .map_err(|e| error!("get relative path failed: {}", e))?;
@@ -68,7 +69,7 @@ impl SplitPackStrategy {
 
   pub async fn get_pack_hash(
     &self,
-    path: &PathBuf,
+    path: &Utf8Path,
     keys: &PackKeys,
     contents: &PackContents,
   ) -> Result<String> {

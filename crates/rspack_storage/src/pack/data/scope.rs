@@ -117,6 +117,7 @@ impl PackScope {
               keys
                 .iter()
                 .enumerate()
+                // TODO: Do not clone here, try to return reference
                 .map(|(index, key)| (key.clone(), contents[index].clone()))
                 .collect_vec(),
             );

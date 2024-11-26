@@ -121,6 +121,14 @@ impl PackFileWriter for NativeFileWriter {
   async fn flush(&mut self) -> Result<()> {
     Ok(())
   }
+
+  async fn write(&mut self, content: &[u8]) -> Result<()> {
+    self
+      .inner
+      .write_all(content)
+      .map_err(|e| PackFsError::from_io_error(&self.path, PackFsErrorOpt::Write, e))?;
+    Ok(())
+  }
 }
 
 #[derive(Debug)]
@@ -163,6 +171,14 @@ impl PackFileReader for NativeFileReader {
       .inner
       .seek_relative(len as i64)
       .map_err(|e| PackFsError::from_io_error(&self.path, PackFsErrorOpt::Read, e).into())
+  }
+  async fn remain(&mut self) -> Result<Vec<u8>> {
+    let mut bytes = vec![];
+    self
+      .inner
+      .read_to_end(&mut bytes)
+      .map_err(|e| PackFsError::from_io_error(&self.path, PackFsErrorOpt::Read, e))?;
+    Ok(bytes)
   }
 }
 

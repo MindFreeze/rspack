@@ -4,7 +4,7 @@ mod pack;
 use std::sync::Arc;
 
 // pub use fs::FsStorage;
-pub use pack::{PackFs, PackMemoryFs, PackNativeFs, PackOptions, PackStorage};
+pub use pack::{PackFs, PackMemoryFs, PackNativeFs, PackOptions, PackStorage, PackStorageOptions};
 use rspack_error::Result;
 use tokio::sync::oneshot::Receiver;
 

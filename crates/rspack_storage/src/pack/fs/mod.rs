@@ -23,6 +23,7 @@ pub trait PackFileReader: std::fmt::Debug + Sync + Send {
   async fn line(&mut self) -> Result<String>;
   async fn bytes(&mut self, len: usize) -> Result<Vec<u8>>;
   async fn skip(&mut self, len: usize) -> Result<()>;
+  async fn remain(&mut self) -> Result<Vec<u8>>;
 }
 
 #[async_trait::async_trait]
@@ -30,6 +31,7 @@ pub trait PackFileWriter: std::fmt::Debug + Sync + Send {
   async fn line(&mut self, line: &str) -> Result<()>;
   async fn bytes(&mut self, bytes: &[u8]) -> Result<()>;
   async fn flush(&mut self) -> Result<()>;
+  async fn write(&mut self, content: &[u8]) -> Result<()>;
 }
 
 #[async_trait::async_trait]

@@ -10,38 +10,10 @@ pub mod test_pack_utils {
   use rspack_error::Result;
   use rustc_hash::FxHashMap as HashMap;
 
-  use crate::{pack::PackScope, PackFs, PackOptions};
-
-  pub async fn mock_pack_file(
-    path: &PathBuf,
-    unique_id: &str,
-    item_count: usize,
-    fs: Arc<dyn PackFs>,
-  ) -> Result<()> {
-    fs.ensure_dir(&PathBuf::from(path.parent().expect("should have parent")))
-      .await?;
-    let mut writer = fs.write_file(&path).await?;
-    let mut keys = vec![];
-    let mut contents = vec![];
-    for i in 0..item_count {
-      keys.push(format!("key_{}_{}", unique_id, i).as_bytes().to_vec());
-      contents.push(format!("val_{}_{}", unique_id, i).as_bytes().to_vec());
-    }
-    writer
-      .line(keys.iter().map(|k| k.len()).join(" ").as_str())
-      .await?;
-    writer
-      .line(contents.iter().map(|k| k.len()).join(" ").as_str())
-      .await?;
-    for key in keys {
-      writer.bytes(&key).await?;
-    }
-    for content in contents {
-      writer.bytes(&content).await?;
-    }
-    writer.flush().await?;
-    Ok(())
-  }
+  use crate::{
+    pack::{PackScope, SplitPackStrategy},
+    PackFs, PackOptions,
+  };
 
   pub async fn mock_meta_file(
     path: &PathBuf,
@@ -72,6 +44,37 @@ pub mod test_pack_utils {
 
     writer.flush().await?;
 
+    Ok(())
+  }
+
+  pub async fn mock_pack_file(
+    path: &PathBuf,
+    unique_id: &str,
+    item_count: usize,
+    fs: Arc<dyn PackFs>,
+  ) -> Result<()> {
+    fs.ensure_dir(&PathBuf::from(path.parent().expect("should have parent")))
+      .await?;
+    let mut writer = fs.write_file(&path).await?;
+    let mut keys = vec![];
+    let mut contents = vec![];
+    for i in 0..item_count {
+      keys.push(format!("key_{}_{}", unique_id, i).as_bytes().to_vec());
+      contents.push(format!("val_{}_{}", unique_id, i).as_bytes().to_vec());
+    }
+    writer
+      .line(keys.iter().map(|k| k.len()).join(" ").as_str())
+      .await?;
+    writer
+      .line(contents.iter().map(|k| k.len()).join(" ").as_str())
+      .await?;
+    for key in keys {
+      writer.bytes(&key).await?;
+    }
+    for content in contents {
+      writer.bytes(&content).await?;
+    }
+    writer.flush().await?;
     Ok(())
   }
 
@@ -130,5 +133,27 @@ pub mod test_pack_utils {
       .collect_vec();
     res.sort_unstable();
     res
+  }
+
+  pub async fn clean_scope_path(
+    scope: &PackScope,
+    strategy: &SplitPackStrategy,
+    fs: Arc<dyn PackFs>,
+  ) {
+    fs.remove_dir(&scope.path).await.expect("should remove dir");
+    fs.remove_dir(
+      &strategy
+        .get_temp_path(&scope.path)
+        .expect("should get temp path"),
+    )
+    .await
+    .expect("should remove dir");
+  }
+
+  pub async fn flush_file_mtime(path: &PathBuf, fs: Arc<dyn PackFs>) -> Result<()> {
+    let content = fs.read_file(path).await?.remain().await?;
+    fs.write_file(path).await?.write(&content).await?;
+
+    Ok(())
   }
 }

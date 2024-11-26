@@ -49,9 +49,62 @@ pub trait ScopeReadStrategy {
 }
 
 #[derive(Debug)]
+pub struct InvalidDetail {
+  pub reason: String,
+  pub packs: Vec<String>,
+}
+
+#[derive(Debug)]
 pub enum ValidateResult {
   Valid,
-  Invalid(String),
+  Invalid(InvalidDetail),
+}
+
+impl ValidateResult {
+  pub fn invalid(reason: &str) -> Self {
+    Self::Invalid(InvalidDetail {
+      reason: reason.to_string(),
+      packs: vec![],
+    })
+  }
+  pub fn invalid_with_packs(reason: &str, packs: Vec<String>) -> Self {
+    Self::Invalid(InvalidDetail {
+      reason: reason.to_string(),
+      packs,
+    })
+  }
+  pub fn is_valid(&self) -> bool {
+    matches!(self, ValidateResult::Valid)
+  }
+}
+
+impl std::fmt::Display for ValidateResult {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      ValidateResult::Valid => write!(f, "validation passed"),
+      ValidateResult::Invalid(e) => {
+        let mut pack_info_lines = e
+          .packs
+          .iter()
+          .map(|p| format!("- {}", p))
+          .collect::<Vec<_>>();
+        if pack_info_lines.len() > 5 {
+          pack_info_lines.truncate(5);
+          pack_info_lines.push("...".to_string());
+        }
+        write!(
+          f,
+          "validation failed due to {}{}",
+          e.reason,
+          if pack_info_lines.is_empty() {
+            "".to_string()
+          } else {
+            format!(":\n{}", pack_info_lines.join("\n"))
+          }
+        )
+      }
+    }
+  }
 }
 
 #[async_trait]

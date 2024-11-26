@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use futures::future::join_all;
 use itertools::Itertools;
-use rspack_error::{error, Result};
+use rspack_error::{error, Error, Result};
 use rustc_hash::FxHashMap as HashMap;
 use tokio::sync::oneshot::Receiver;
 use tokio::sync::{oneshot, Mutex};
@@ -57,19 +57,18 @@ impl ScopeManager {
       .or_insert_with(|| PackScope::new(self.strategy.get_path(name), self.options.clone()));
 
     match validate_scope(scope, self.strategy.as_ref()).await {
-      Ok(validate) => match validate {
-        ValidateResult::Valid => {
+      Ok(res) => {
+        if res.is_valid() {
           self.strategy.ensure_contents(scope).await?;
           Ok(scope.get_contents())
-        }
-        ValidateResult::Invalid(reason) => {
+        } else {
           scope.clear();
-          Err(error!("cache scope `{}` is invalid: {}", name, reason))
+          Err(error!(res.to_string()))
         }
-      },
+      }
       Err(e) => {
         scope.clear();
-        Err(error!("read cache scope `{}` failed: {}", name, e))
+        Err(Error::from(e))
       }
     }
   }
@@ -80,10 +79,9 @@ async fn validate_scope(
   strategy: &dyn ScopeStrategy,
 ) -> Result<ValidateResult> {
   strategy.ensure_meta(scope).await?;
-
   let is_meta_valid = strategy.validate_meta(scope).await?;
 
-  if matches!(is_meta_valid, ValidateResult::Valid) {
+  if is_meta_valid.is_valid() {
     strategy.ensure_keys(scope).await?;
     strategy.validate_packs(scope).await
   } else {

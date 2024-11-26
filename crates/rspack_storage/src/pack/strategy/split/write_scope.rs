@@ -273,9 +273,10 @@ mod tests {
   use crate::{
     pack::{
       strategy::split::test::test_pack_utils::{
-        count_bucket_packs, count_scope_packs, get_bucket_pack_sizes, mock_updates, UpdateVal,
+        clean_scope_path, count_bucket_packs, count_scope_packs, get_bucket_pack_sizes,
+        mock_updates, UpdateVal,
       },
-      PackFs, PackMemoryFs, PackScope, ScopeWriteStrategy, SplitPackStrategy,
+      PackMemoryFs, PackScope, ScopeWriteStrategy, SplitPackStrategy,
     },
     PackOptions,
   };
@@ -288,7 +289,6 @@ mod tests {
   ) -> Result<()> {
     let updates = mock_updates(start, end, 8, UpdateVal::Value("val".into()));
     strategy.update_scope(scope, updates).await?;
-
     let contents = scope.get_contents().into_iter().collect::<HashMap<_, _>>();
 
     assert_eq!(contents.len(), end);
@@ -315,7 +315,6 @@ mod tests {
     end: usize,
   ) -> Result<()> {
     let updates = mock_updates(start, end, 24, UpdateVal::Value("val".into()));
-
     let pre_item_count = scope.get_contents().len();
     strategy.update_scope(scope, updates).await?;
     let contents = scope.get_contents().into_iter().collect::<HashMap<_, _>>();
@@ -343,7 +342,6 @@ mod tests {
     let contents = scope.get_contents().into_iter().collect::<HashMap<_, _>>();
 
     assert_eq!(contents.len(), pre_item_count);
-
     assert_eq!(
       **contents
         .get(&format!("{:0>4}_key", 0).as_bytes().to_vec())
@@ -385,14 +383,14 @@ mod tests {
     test_update_value(scope, strategy).await?;
     assert_eq!(count_scope_packs(&scope), 10);
     let res = strategy.write_scope(scope).await?;
-    // 1 packs + 1 meta
+    // 1 pack + 1 meta
     assert_eq!(res.writed_files.len(), 2);
     assert_eq!(res.removed_files.len(), 1);
 
     test_remove_value(scope, strategy).await?;
     assert_eq!(count_scope_packs(&scope), 10);
     let res = strategy.write_scope(scope).await?;
-    // 1 packs + 1 meta
+    // 1 pack + 1 meta
     assert_eq!(res.writed_files.len(), 2);
     assert_eq!(res.removed_files.len(), 1);
 
@@ -454,17 +452,6 @@ mod tests {
     assert_eq!(get_bucket_pack_sizes(&scope), [160, 1760, 2000, 2000]);
 
     Ok(())
-  }
-
-  async fn clean_scope_path(scope: &PackScope, strategy: &SplitPackStrategy, fs: Arc<dyn PackFs>) {
-    fs.remove_dir(&scope.path).await.expect("should remove dir");
-    fs.remove_dir(
-      &strategy
-        .get_temp_path(&scope.path)
-        .expect("should get temp path"),
-    )
-    .await
-    .expect("should remove dir");
   }
 
   #[tokio::test]

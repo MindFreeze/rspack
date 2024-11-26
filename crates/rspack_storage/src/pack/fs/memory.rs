@@ -11,7 +11,7 @@ use rspack_paths::{AssertUtf8, Utf8PathBuf};
 use super::{FileMeta, PackFileReader, PackFileWriter, PackFs, PackFsError, PackFsErrorOpt};
 
 #[derive(Debug, Default)]
-pub struct PackMemoryFs(Arc<MemoryFileSystem>);
+pub struct PackMemoryFs(pub Arc<MemoryFileSystem>);
 
 #[async_trait::async_trait]
 impl PackFs for PackMemoryFs {
@@ -127,6 +127,11 @@ impl PackFileWriter for MemoryFileWriter {
     self.fs.write(&self.path, &self.contents).await?;
     Ok(())
   }
+
+  async fn write(&mut self, content: &[u8]) -> Result<()> {
+    self.fs.write(&self.path, content).await?;
+    Ok(())
+  }
 }
 
 #[derive(Debug)]
@@ -195,6 +200,16 @@ impl PackFileReader for MemoryFileReader {
     reader
       .seek_relative(len as i64)
       .map_err(|e| PackFsError::from_io_error(&self.path, PackFsErrorOpt::Read, e).into())
+  }
+
+  async fn remain(&mut self) -> Result<Vec<u8>> {
+    self.ensure_contents().await?;
+    let reader = self.reader.as_mut().expect("should have reader");
+    let mut bytes = vec![];
+    reader
+      .read_to_end(&mut bytes)
+      .map_err(|e| PackFsError::from_io_error(&self.path, PackFsErrorOpt::Read, e))?;
+    Ok(bytes)
   }
 }
 

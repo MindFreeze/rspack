@@ -37,7 +37,7 @@ impl ScopeMetaState {
 
 pub type ScopePacks = Vec<Vec<Pack>>;
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default)]
 pub enum ScopePacksState {
   #[default]
   Pending,
@@ -86,16 +86,9 @@ impl PackScope {
   }
 
   pub fn empty(path: Utf8PathBuf, options: Arc<PackOptions>) -> Self {
-    let meta = ScopeMeta::new(&path, &options);
-    let packs = vec![vec![]; options.buckets];
-
-    Self {
-      path,
-      options,
-      meta: ScopeMetaState::Value(meta),
-      packs: ScopePacksState::Value(packs),
-      removed: HashSet::default(),
-    }
+    let mut scope = Self::new(path, options);
+    scope.clear();
+    scope
   }
 
   pub fn loaded(&self) -> bool {
@@ -137,7 +130,7 @@ impl PackScope {
 
   pub fn clear(&mut self) {
     self.meta = ScopeMetaState::Value(ScopeMeta::new(&self.path, &self.options));
-    self.packs = ScopePacksState::Value(vec![vec![]; self.options.buckets]);
+    self.packs = ScopePacksState::Value((0..self.options.buckets).map(|_| vec![]).collect_vec());
     self.removed = HashSet::default();
   }
 }

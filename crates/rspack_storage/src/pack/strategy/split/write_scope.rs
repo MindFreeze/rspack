@@ -141,33 +141,53 @@ impl ScopeWriteStrategy for SplitPackStrategy {
       return Err(error!("scope not loaded, run `get_all` first"));
     }
     let removed_files = std::mem::take(&mut scope.removed);
-    let packs = scope.packs.expect_value();
+    let packs = scope.packs.take_value().expect("should have scope packs");
     let meta = scope.meta.expect_value_mut();
 
     let mut wrote_files = HashSet::default();
 
-    let mut candidates = packs
-      .iter()
+    let (wrote_pack_infos, new_pack_infos): (Vec<_>, Vec<_>) = packs
+      .into_iter()
       .flatten()
       .zip(meta.packs.iter_mut().flatten())
-      .filter(|(_, meta)| !meta.wrote)
-      .collect_vec();
+      .partition(|x| x.1.wrote);
 
-    let write_results =
-      batch_write_packs(candidates.iter().map(|i| i.0.clone()).collect_vec(), self).await?;
+    let (new_packs, new_pack_metas): (Vec<_>, Vec<_>) = new_pack_infos.into_iter().unzip();
+    let write_results = batch_write_packs(new_packs, self).await?;
 
-    for ((_, meta), (hash, path, size)) in candidates.iter_mut().zip(write_results.into_iter()) {
+    let mut wrote_packs = wrote_pack_infos
+      .into_iter()
+      .map(|(pack, meta)| (meta.hash.clone(), pack))
+      .collect::<HashMap<_, _>>();
+
+    for (meta, (hash, pack)) in new_pack_metas.into_iter().zip(write_results.into_iter()) {
       let _ = std::mem::replace(
-        *meta,
+        meta,
         PackFileMeta {
-          hash,
-          size,
+          hash: hash.clone(),
+          size: pack.size(),
           name: meta.name.clone(),
           wrote: true,
         },
       );
-      wrote_files.insert(path);
+      wrote_files.insert(pack.path.clone());
+      wrote_packs.insert(hash, pack);
     }
+
+    let mut wrote_scope_packs = vec![];
+    for bucket_pack_metas in meta.packs.iter() {
+      let mut bucket_packs = vec![];
+      for pack_meta in bucket_pack_metas {
+        let pack = wrote_packs
+          .remove(&pack_meta.hash)
+          .expect("should have pack");
+        bucket_packs.push(pack);
+      }
+
+      wrote_scope_packs.push(bucket_packs);
+    }
+
+    scope.packs = ScopePacksState::Value(wrote_scope_packs);
 
     Ok(WriteScopeResult {
       wrote_files,
@@ -228,39 +248,37 @@ impl ScopeWriteStrategy for SplitPackStrategy {
   }
 }
 
-async fn save_pack(
-  pack: Pack,
-  strategy: &SplitPackStrategy,
-) -> Result<(String, Utf8PathBuf, usize)> {
+async fn save_pack(pack: &Pack, strategy: &SplitPackStrategy) -> Result<String> {
   let keys = pack.keys.expect_value();
   let contents = pack.contents.expect_value();
   if keys.len() != contents.len() {
     return Err(error!("pack keys and contents length not match"));
   }
-  strategy.write_pack(&pack).await?;
+  strategy.write_pack(pack).await?;
   let hash = strategy
     .get_pack_hash(&strategy.get_temp_path(&pack.path)?, keys, contents)
     .await?;
-  Ok((hash, pack.path.clone(), pack.size()))
+  Ok(hash)
 }
 
 async fn batch_write_packs(
   packs: Vec<Pack>,
   strategy: &SplitPackStrategy,
-) -> Result<Vec<(String, Utf8PathBuf, usize)>> {
+) -> Result<Vec<(String, Pack)>> {
   let tasks = packs.into_iter().map(|pack| {
     let strategy = strategy.to_owned();
-    tokio::spawn(async move { save_pack(pack, &strategy).await }).map_err(|e| error!("{}", e))
+    tokio::spawn(async move { (save_pack(&pack, &strategy).await, pack) })
+      .map_err(|e| error!("{}", e))
   });
 
-  let wrote = join_all(tasks)
+  let task_result = join_all(tasks)
     .await
     .into_iter()
-    .collect::<Result<Vec<Result<(String, Utf8PathBuf, usize)>>>>()?;
+    .collect::<Result<Vec<(Result<String>, Pack)>>>()?;
 
   let mut res = vec![];
-  for item in wrote {
-    res.push(item?);
+  for (hash, pack) in task_result {
+    res.push((hash?, pack));
   }
   Ok(res)
 }

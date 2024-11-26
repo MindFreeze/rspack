@@ -3,7 +3,7 @@ use rspack_paths::Utf8PathBuf;
 pub type PackKeys = Vec<Vec<u8>>;
 pub type PackContents = Vec<Vec<u8>>;
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default)]
 pub enum PackKeysState {
   #[default]
   Pending,
@@ -19,7 +19,7 @@ impl PackKeysState {
   }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default)]
 pub enum PackContentsState {
   #[default]
   Pending,
@@ -35,7 +35,7 @@ impl PackContentsState {
   }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Pack {
   pub path: Utf8PathBuf,
   pub keys: PackKeysState,

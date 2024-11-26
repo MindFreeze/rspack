@@ -212,7 +212,7 @@ async fn create(
     // handle big single cache
     if last_item.0.len() as f64 + last_item.1.len() as f64 > options.max_pack_size as f64 * 0.8_f64
     {
-      let (key, value) = items.pop().expect("shoud have first item");
+      let (key, value) = items.pop().expect("should have first item");
       new_packs.push(create_pack(dir, vec![key], vec![value]));
     } else {
       break;
@@ -237,7 +237,7 @@ async fn create(
         break;
       }
 
-      let (key, value) = items.pop().expect("shoud have first item");
+      let (key, value) = items.pop().expect("should have first item");
       batch_size += value.len() + key.len();
       batch_keys.push(key);
       batch_contents.push(value);

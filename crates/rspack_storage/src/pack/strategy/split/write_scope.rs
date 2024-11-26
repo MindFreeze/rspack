@@ -40,8 +40,8 @@ impl ScopeWriteStrategy for SplitPackStrategy {
     if !scope.loaded() {
       return Err(error!("scope not loaded, run `get_all` first"));
     }
-    let mut scope_meta = scope.meta.take_value().expect("shoud have scope meta");
-    let mut scope_packs = scope.packs.take_value().expect("shoud have scope packs");
+    let mut scope_meta = scope.meta.take_value().expect("should have scope meta");
+    let mut scope_packs = scope.packs.take_value().expect("should have scope packs");
 
     // get changed buckets
     let bucket_updates = updates

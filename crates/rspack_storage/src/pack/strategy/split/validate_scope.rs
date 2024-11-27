@@ -252,7 +252,6 @@ mod tests {
     let updates = mock_updates(0, 100, 30, UpdateVal::Value("val".to_string()));
     strategy
       .update_scope(&mut mock_scope, updates)
-      .await
       .expect("should update scope");
     let files = strategy
       .write_scope(&mut mock_scope)

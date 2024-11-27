@@ -15,7 +15,7 @@ use crate::{
 
 #[async_trait]
 impl PackWriteStrategy for SplitPackStrategy {
-  async fn update_packs(
+  fn update_packs(
     &self,
     dir: Utf8PathBuf,
     options: &PackOptions,
@@ -86,12 +86,7 @@ impl PackWriteStrategy for SplitPackStrategy {
           return acc;
         }
 
-        acc.extend(
-          keys
-            .into_iter()
-            .zip(contents.into_iter())
-            .collect::<HashMap<_, _>>(),
-        );
+        acc.extend(keys.into_iter().zip(contents).collect::<HashMap<_, _>>());
 
         acc
       })
@@ -116,7 +111,7 @@ impl PackWriteStrategy for SplitPackStrategy {
     }
 
     let remain_packs = indexed_packs.into_values().collect_vec();
-    let new_packs: Vec<(PackFileMeta, Pack)> = create(&pack_dir, options, items).await;
+    let new_packs: Vec<(PackFileMeta, Pack)> = create(&pack_dir, options, items);
 
     UpdatePacksResult {
       new_packs,
@@ -178,7 +173,7 @@ impl PackWriteStrategy for SplitPackStrategy {
   }
 }
 
-async fn create(
+fn create(
   dir: &Utf8Path,
   options: &PackOptions,
   items: HashMap<Vec<u8>, Vec<u8>>,
@@ -336,14 +331,12 @@ mod tests {
 
     // half pack
     let mut packs = HashMap::default();
-    let res = strategy
-      .update_packs(
-        dir.clone(),
-        &options,
-        packs,
-        mock_updates(0, 50, 10, UpdateVal::Value("val".into())),
-      )
-      .await;
+    let res = strategy.update_packs(
+      dir.clone(),
+      &options,
+      packs,
+      mock_updates(0, 50, 10, UpdateVal::Value("val".into())),
+    );
     assert_eq!(res.new_packs.len(), 1);
     assert_eq!(res.remain_packs.len(), 0);
     assert_eq!(get_pack_sizes(&res), vec![1000]);
@@ -351,14 +344,12 @@ mod tests {
     packs = update_packs(res);
 
     // full pack
-    let res = strategy
-      .update_packs(
-        dir.clone(),
-        &options,
-        packs,
-        mock_updates(50, 100, 10, UpdateVal::Value("val".into())),
-      )
-      .await;
+    let res = strategy.update_packs(
+      dir.clone(),
+      &options,
+      packs,
+      mock_updates(50, 100, 10, UpdateVal::Value("val".into())),
+    );
     assert_eq!(res.new_packs.len(), 1);
     assert_eq!(res.remain_packs.len(), 0);
     assert_eq!(res.removed_files.len(), 1);
@@ -367,14 +358,12 @@ mod tests {
     packs = update_packs(res);
 
     // almost full pack
-    let res = strategy
-      .update_packs(
-        dir.clone(),
-        &options,
-        packs,
-        mock_updates(100, 190, 10, UpdateVal::Value("val".into())),
-      )
-      .await;
+    let res = strategy.update_packs(
+      dir.clone(),
+      &options,
+      packs,
+      mock_updates(100, 190, 10, UpdateVal::Value("val".into())),
+    );
     assert_eq!(res.new_packs.len(), 1);
     assert_eq!(res.remain_packs.len(), 1);
     assert_eq!(res.removed_files.len(), 0);
@@ -382,14 +371,12 @@ mod tests {
 
     packs = update_packs(res);
 
-    let res = strategy
-      .update_packs(
-        dir.clone(),
-        &options,
-        packs,
-        mock_updates(190, 200, 10, UpdateVal::Value("val".into())),
-      )
-      .await;
+    let res = strategy.update_packs(
+      dir.clone(),
+      &options,
+      packs,
+      mock_updates(190, 200, 10, UpdateVal::Value("val".into())),
+    );
     assert_eq!(res.new_packs.len(), 1);
     assert_eq!(res.remain_packs.len(), 2);
     assert_eq!(res.removed_files.len(), 0);
@@ -400,9 +387,7 @@ mod tests {
     // long item pack
     let mut updates = mock_updates(0, 1, 1200, UpdateVal::Value("val".into()));
     updates.extend(mock_updates(1, 2, 900, UpdateVal::Value("val".into())));
-    let res = strategy
-      .update_packs(dir.clone(), &options, packs, updates)
-      .await;
+    let res = strategy.update_packs(dir.clone(), &options, packs, updates);
     assert_eq!(res.new_packs.len(), 3);
     assert_eq!(res.remain_packs.len(), 2);
     assert_eq!(res.removed_files.len(), 1);
@@ -411,14 +396,12 @@ mod tests {
     packs = update_packs(res);
 
     // remove items pack
-    let res = strategy
-      .update_packs(
-        dir.clone(),
-        &options,
-        packs,
-        mock_updates(100, 130, 10, UpdateVal::Removed),
-      )
-      .await;
+    let res = strategy.update_packs(
+      dir.clone(),
+      &options,
+      packs,
+      mock_updates(100, 130, 10, UpdateVal::Removed),
+    );
     assert_eq!(res.new_packs.len(), 1);
     assert_eq!(res.remain_packs.len(), 3);
     assert_eq!(res.removed_files.len(), 2);
@@ -432,9 +415,7 @@ mod tests {
       format!("{:0>6}_key", 131).as_bytes().to_vec(),
       Some(format!("{:0>6}_valaaa", 131).as_bytes().to_vec()),
     );
-    let res = strategy
-      .update_packs(dir.clone(), &options, packs, updates)
-      .await;
+    let res = strategy.update_packs(dir.clone(), &options, packs, updates);
     assert_eq!(res.new_packs.len(), 1);
     assert_eq!(res.remain_packs.len(), 3);
     assert_eq!(res.removed_files.len(), 1);

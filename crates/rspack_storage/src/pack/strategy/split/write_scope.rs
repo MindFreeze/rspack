@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use futures::future::join_all;
 use futures::TryFutureExt;
 use itertools::Itertools;
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
+use rayon::iter::{IntoParallelIterator, ParallelBridge, ParallelIterator};
 use rspack_error::{error, Result};
 use rspack_paths::Utf8PathBuf;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
@@ -32,7 +32,7 @@ impl ScopeWriteStrategy for SplitPackStrategy {
     self.fs.remove_dir(&self.temp_root).await?;
     Ok(())
   }
-  async fn update_scope(
+  fn update_scope(
     &self,
     scope: &mut PackScope,
     updates: HashMap<Vec<u8>, Option<Vec<u8>>>,
@@ -61,58 +61,46 @@ impl ScopeWriteStrategy for SplitPackStrategy {
       );
 
     // get dirty buckets
-    let mut bucket_tasks = vec![];
-    let mut bucket_task_ids = vec![];
-    for (dirty_bucket_id, dirty_items) in bucket_updates.into_iter() {
-      let dirty_bucket_packs = {
-        let mut packs = HashMap::default();
-
-        let old_dirty_bucket_metas = std::mem::take(
+    let bucket_results = bucket_updates
+      .into_iter()
+      .map(|(bucket_id, bucket_update)| {
+        // get old packs with metas
+        let old_metas = std::mem::take(
           scope_meta
             .packs
-            .get_mut(dirty_bucket_id)
+            .get_mut(bucket_id)
             .expect("should have bucket pack metas"),
-        )
-        .into_iter()
-        .enumerate()
-        .collect::<HashMap<_, _>>();
+        );
 
-        let mut old_dirty_bucket_packs = std::mem::take(
+        let old_packs = std::mem::take(
           scope_packs
-            .get_mut(dirty_bucket_id)
+            .get_mut(bucket_id)
             .expect("should have bucket packs"),
-        )
-        .into_iter()
-        .enumerate()
-        .collect::<HashMap<_, _>>();
+        );
 
-        for (key, pack_meta) in old_dirty_bucket_metas.into_iter() {
-          let pack = old_dirty_bucket_packs
-            .remove(&key)
-            .expect("should have bucket pack");
-          packs.insert(pack_meta, pack);
-        }
-        packs
-      };
+        let bucket_packs = old_metas
+          .into_iter()
+          .zip(old_packs)
+          .collect::<HashMap<_, _>>();
 
-      bucket_tasks.push(self.update_packs(
-        scope.path.join(dirty_bucket_id.to_string()),
-        scope.options.as_ref(),
-        dirty_bucket_packs,
-        dirty_items,
-      ));
-      bucket_task_ids.push(dirty_bucket_id);
-    }
-
-    // generate dirty buckets
-    let dirty_bucket_results = bucket_task_ids
-      .into_iter()
-      .zip(join_all(bucket_tasks).await.into_iter())
-      .collect::<HashMap<_, _>>();
+        (bucket_id, bucket_update, bucket_packs)
+      })
+      .par_bridge()
+      .map(|(bucket_id, bucket_update, bucket_packs)| {
+        // generate new packs
+        let packs = self.update_packs(
+          scope.path.join(bucket_id.to_string()),
+          scope.options.as_ref(),
+          bucket_packs,
+          bucket_update,
+        );
+        (bucket_id, packs)
+      })
+      .collect::<Vec<_>>();
 
     let mut total_files = HashSet::default();
     // link remain packs to scope
-    for (bucket_id, bucket_result) in dirty_bucket_results {
+    for (bucket_id, bucket_result) in bucket_results {
       for (pack_meta, pack) in bucket_result.remain_packs {
         total_files.insert(pack.path.clone());
         scope_packs[bucket_id].push(pack);
@@ -308,7 +296,7 @@ mod tests {
     end: usize,
   ) -> Result<()> {
     let updates = mock_updates(start, end, 8, UpdateVal::Value("val".into()));
-    strategy.update_scope(scope, updates).await?;
+    strategy.update_scope(scope, updates)?;
     let contents = scope.get_contents().into_iter().collect::<HashMap<_, _>>();
 
     assert_eq!(contents.len(), end);
@@ -336,7 +324,7 @@ mod tests {
   ) -> Result<()> {
     let updates = mock_updates(start, end, 24, UpdateVal::Value("val".into()));
     let pre_item_count = scope.get_contents().len();
-    strategy.update_scope(scope, updates).await?;
+    strategy.update_scope(scope, updates)?;
     let contents = scope.get_contents().into_iter().collect::<HashMap<_, _>>();
 
     assert_eq!(contents.len(), pre_item_count + end - start);
@@ -358,7 +346,7 @@ mod tests {
   async fn test_update_value(scope: &mut PackScope, strategy: &SplitPackStrategy) -> Result<()> {
     let updates = mock_updates(0, 1, 8, UpdateVal::Value("new".into()));
     let pre_item_count = scope.get_contents().len();
-    strategy.update_scope(scope, updates).await?;
+    strategy.update_scope(scope, updates)?;
     let contents = scope.get_contents().into_iter().collect::<HashMap<_, _>>();
 
     assert_eq!(contents.len(), pre_item_count);
@@ -375,7 +363,7 @@ mod tests {
   async fn test_remove_value(scope: &mut PackScope, strategy: &SplitPackStrategy) -> Result<()> {
     let updates = mock_updates(1, 2, 8, UpdateVal::Removed);
     let pre_item_count = scope.get_contents().len();
-    strategy.update_scope(scope, updates).await?;
+    strategy.update_scope(scope, updates)?;
     let contents = scope.get_contents().into_iter().collect::<HashMap<_, _>>();
 
     assert_eq!(contents.len(), pre_item_count - 1);

@@ -5,6 +5,7 @@ use std::sync::Arc;
 use futures::future::join_all;
 use itertools::Itertools;
 use queue::TaskQueue;
+use rayon::iter::{ParallelBridge, ParallelIterator};
 use rspack_error::{error, Error, Result};
 use rustc_hash::FxHashMap as HashMap;
 use tokio::sync::oneshot::Receiver;
@@ -33,24 +34,31 @@ impl ScopeManager {
       queue: TaskQueue::new(),
     }
   }
-  pub fn save(&self, updates: ScopeUpdates) -> Receiver<Result<()>> {
-    let scopes = self.scopes.clone();
-    let options = self.options.clone();
-    let strategy = self.strategy.clone();
 
+  pub fn save(&self, updates: ScopeUpdates) -> Result<Receiver<Result<()>>> {
+    update_scopes(
+      &mut self.scopes.blocking_lock(),
+      updates,
+      self.options.clone(),
+      self.strategy.as_ref(),
+    )?;
+
+    let scopes = self.scopes.clone();
+    let strategy = self.strategy.clone();
     let (tx, rx) = oneshot::channel();
     self.queue.add_task(Box::pin(async move {
-      let old_scopes = std::mem::take(&mut *scopes.lock().await);
-      let _ = match save_scopes(old_scopes, updates, options, strategy.as_ref()).await {
+      let mut scopes_lock = scopes.lock().await;
+      let old_scopes = std::mem::take(&mut *scopes_lock);
+      let _ = match save_scopes(old_scopes, strategy.as_ref()).await {
         Ok(new_scopes) => {
-          let _ = std::mem::replace(&mut *scopes.lock().await, new_scopes);
+          let _ = std::mem::replace(&mut *scopes_lock, new_scopes);
           tx.send(Ok(()))
         }
         Err(e) => tx.send(Err(e)),
       };
     }));
 
-    rx
+    Ok(rx)
   }
 
   pub async fn get_all(&self, name: &'static str) -> Result<StorageContent> {
@@ -93,32 +101,35 @@ async fn validate_scope(
   }
 }
 
-async fn save_scopes(
-  mut scopes: ScopeMap,
+fn update_scopes(
+  scopes: &mut ScopeMap,
   mut updates: ScopeUpdates,
   options: Arc<PackOptions>,
   strategy: &dyn ScopeStrategy,
-) -> Result<ScopeMap> {
-  strategy.before_save().await?;
-
+) -> Result<()> {
   for (scope_name, _) in updates.iter() {
     scopes
       .entry(scope_name)
       .or_insert_with(|| PackScope::empty(strategy.get_path(scope_name), options.clone()));
   }
 
-  let update_tasks = join_all(
-    scopes
-      .iter_mut()
-      .map(|(name, scope)| (scope, updates.remove(name).unwrap_or_default()))
-      .collect_vec()
-      .into_iter()
-      .map(|(scope, updates)| strategy.update_scope(scope, updates)),
-  );
+  scopes
+    .iter_mut()
+    .filter_map(|(name, scope)| {
+      updates
+        .remove(name)
+        .map(|scope_update| (scope, scope_update))
+    })
+    .par_bridge()
+    .map(|(scope, updates)| strategy.update_scope(scope, updates))
+    .collect::<Result<Vec<_>>>()?;
 
-  update_tasks.await.into_iter().collect::<Result<()>>()?;
+  Ok(())
+}
 
-  let mut scopes = scopes.into_iter().collect_vec();
+async fn save_scopes(mut scopes: ScopeMap, strategy: &dyn ScopeStrategy) -> Result<ScopeMap> {
+  strategy.before_save().await?;
+
   let save_tasks = join_all(
     scopes
       .iter_mut()

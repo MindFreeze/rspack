@@ -28,7 +28,7 @@ pub trait PackReadStrategy {
 
 #[async_trait]
 pub trait PackWriteStrategy {
-  async fn update_packs(
+  fn update_packs(
     &self,
     dir: Utf8PathBuf,
     options: &PackOptions,
@@ -133,7 +133,7 @@ pub trait ScopeWriteStrategy {
     wrote_files: HashSet<Utf8PathBuf>,
     removed_files: HashSet<Utf8PathBuf>,
   ) -> Result<()>;
-  async fn update_scope(
+  fn update_scope(
     &self,
     scope: &mut PackScope,
     updates: HashMap<Vec<u8>, Option<Vec<u8>>>,

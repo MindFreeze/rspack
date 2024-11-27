@@ -94,6 +94,7 @@ pub async fn repair(
   build_dependencies: HashSet<BuildDependency>,
 ) -> Result<MakeArtifact> {
   let module_graph = artifact.get_module_graph_mut();
+  println!("build_dependencies is {:?}", build_dependencies);
   let init_tasks = build_dependencies
     .into_iter()
     .filter_map::<Box<dyn Task<MakeTaskContext>>, _>(|(id, parent_module_identifier)| {

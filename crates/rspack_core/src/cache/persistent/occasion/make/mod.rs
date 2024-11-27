@@ -28,6 +28,7 @@ impl MakeOccasion {
     Self { storage, context }
   }
 
+  #[tracing::instrument(name = "MakeOccasion::save", skip_all)]
   pub fn save(&self, artifact: &MakeArtifact) {
     let mg = artifact.get_module_graph();
     let total = artifact.built_modules.len();
@@ -45,17 +46,15 @@ impl MakeOccasion {
         let blocks = module
           .get_blocks()
           .par_iter()
-          .map(|block_id| mg.block_by_id(block_id).expect("should have block").clone())
+          .map(|block_id| mg.block_by_id(block_id).expect("should have block"))
           .collect::<Vec<_>>();
         let dependencies = mgm
           .all_dependencies
           .par_iter()
           .map(|dep_id| {
             (
-              mg.dependency_by_id(dep_id)
-                .expect("should have dependency")
-                .clone(),
-              mg.get_parent_block(dep_id).copied(),
+              mg.dependency_by_id(dep_id).expect("should have dependency"),
+              mg.get_parent_block(dep_id),
             )
           })
           .collect::<Vec<_>>();
@@ -65,7 +64,6 @@ impl MakeOccasion {
           .map(|dep_id| {
             mg.connection_by_dependency_id(dep_id)
               .expect("should have connection")
-              .clone()
           })
           .collect::<Vec<_>>();
         let node = NodeRef {
@@ -111,6 +109,7 @@ impl MakeOccasion {
     }
   }
 
+  #[tracing::instrument(name = "MakeOccasion::recovery", skip_all)]
   pub fn recovery(&self) -> Result<MakeArtifact, DeserializeError> {
     let mut artifact = MakeArtifact::default();
     for (k, v) in self.storage.get_all(META_SCOPE) {

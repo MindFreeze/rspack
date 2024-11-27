@@ -65,6 +65,7 @@ impl ModuleExecutor {
     make_artifact.diagnostics = Default::default();
     make_artifact.has_module_graph_change = false;
 
+    println!("module exector {params:?}");
     make_artifact = update_module_graph(compilation, make_artifact, params)
       .await
       .unwrap_or_default();

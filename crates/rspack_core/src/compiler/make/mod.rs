@@ -19,6 +19,7 @@ pub struct MakeArtifact {
   // should be reset when rebuild
   pub diagnostics: Vec<Diagnostic>,
   pub has_module_graph_change: bool,
+  pub used: bool,
 
   // data
   pub built_modules: IdentifierSet,
@@ -176,6 +177,8 @@ pub async fn update_module_graph(
   mut artifact: MakeArtifact,
   params: Vec<MakeParam>,
 ) -> Result<MakeArtifact> {
+  println!("update module graph params {params:?}");
+  artifact.used = true;
   let mut cutout = Cutout::default();
   let build_dependencies = cutout.cutout_artifact(&mut artifact, params);
   artifact = repair(compilation, artifact, build_dependencies).await?;

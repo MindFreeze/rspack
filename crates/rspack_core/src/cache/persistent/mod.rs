@@ -53,9 +53,17 @@ impl PersistentCache {
 
 impl Cache for PersistentCache {
   fn before_compile(&self, compilation: &mut Compilation) {
+    println!(
+      "modified_files {:?} {:?}",
+      compilation.modified_files, compilation.removed_files
+    );
     if compilation.modified_files.is_empty() && compilation.removed_files.is_empty() {
       // inject modified_files and removed_files
       let (modified_paths, removed_paths) = self.snapshot.calc_modified_paths();
+      println!(
+        "set modified_paths, removed_paths {:?} {:?}",
+        modified_paths, removed_paths
+      );
       compilation.modified_files = modified_paths
         .into_iter()
         .map(|item| item.into_std_path_buf())
@@ -99,7 +107,13 @@ impl Cache for PersistentCache {
   }
 
   fn before_make(&self, make_artifact: &mut MakeArtifact) {
-    //        self.make_occasion.
+    if !make_artifact.used {
+      match self.make_occasion.recovery() {
+        Ok(artifact) => *make_artifact = artifact,
+        // TODO add error to diagnostic
+        Err(_) => println!("before make recovery error"),
+      }
+    }
   }
 
   fn after_make(&self, make_artifact: &MakeArtifact) {

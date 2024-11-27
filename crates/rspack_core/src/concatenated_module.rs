@@ -11,7 +11,10 @@ use indexmap::IndexMap;
 use rayon::prelude::*;
 use regex::Regex;
 use rspack_ast::javascript::Ast;
-use rspack_cacheable::{cacheable, cacheable_dyn, with::Skip};
+use rspack_cacheable::{
+  cacheable, cacheable_dyn,
+  with::{AsMap, Skip},
+};
 use rspack_collections::{
   Identifiable, Identifier, IdentifierIndexMap, IdentifierIndexSet, IdentifierMap, IdentifierSet,
 };
@@ -63,12 +66,9 @@ pub struct RootModuleContext {
   pub readable_identifier: String,
   pub name_for_condition: Option<Box<str>>,
   pub lib_indent: Option<String>,
-  #[cacheable(with=Skip)]
-  pub resolve_options: Option<Box<Resolve>>, // TODO check
-  #[cacheable(with=Skip)]
-  pub code_generation_dependencies: Option<Vec<Box<dyn ModuleDependency>>>, // TODO check
-  #[cacheable(with=Skip)]
-  pub presentational_dependencies: Option<Vec<Box<dyn DependencyTemplate>>>, // TODO check
+  pub resolve_options: Option<Box<Resolve>>,
+  pub code_generation_dependencies: Option<Vec<Box<dyn ModuleDependency>>>,
+  pub presentational_dependencies: Option<Vec<Box<dyn DependencyTemplate>>>,
   pub context: Option<Context>,
   pub layer: Option<ModuleLayer>,
   pub side_effect_connection_state: ConnectionState,
@@ -363,7 +363,7 @@ pub struct ConcatenatedModule {
 
   blocks: Vec<AsyncDependenciesBlockIdentifier>,
   dependencies: Vec<DependencyId>,
-  #[cacheable(with=Skip)]
+  #[cacheable(with=AsMap)]
   cached_source_sizes: DashMap<SourceType, f64, BuildHasherDefault<FxHasher>>,
   #[cacheable(with=Skip)]
   diagnostics: Mutex<Vec<Diagnostic>>,

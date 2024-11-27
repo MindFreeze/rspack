@@ -8,7 +8,6 @@ use rspack_util::ext::DynHash;
 #[cacheable]
 #[derive(Debug, Clone)]
 pub struct ModuleArgumentDependency {
-  // TODO
   #[cacheable(with=Skip)]
   id: Option<&'static str>,
   range: DependencyRange,
